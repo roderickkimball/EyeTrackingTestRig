@@ -1,0 +1,8 @@
+Guide for wire ampacity: https://www.powerstream.com/Wire_Size.htm
+	Use "Max Amps for Chassis Wiring"
+	Consider that wiring in series (ex. TB6600s) wire carry more amps
+
+Diagrams best used with AutoCAD 2018 or later
+
+
+Kyle B. 
