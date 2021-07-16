@@ -65,12 +65,11 @@ void Robot::runMenuModeState()
 void Robot::runServoCalibrationState()
 {
   char eyeCalCommand = this->getSerialCommand();
-  bool calibrating;
 
-  // CalibrateServos will return false if calibration is stopped or finished
-  calibrating = this->robotEyes.CalibrateServos(eyeCalCommand);
+  // calling robotEyes object to perform calibration of eyes.
+  this->robotEyes.CalibrateServos(eyeCalCommand);
   // if calibration has been stopped, return to MenuMode;
-  if (!calibrating)
+  if (eyeCalCommand == 'b')
   {
     this->SetState(static_cast<int>(MenuMode));
   }
@@ -161,15 +160,16 @@ void Robot::RunState()
         (this)->runStepperHomeState();
         break;
       }
+    case (StepperManual):
+      {
+        //(this)->runStepperManualState();
+        break;
+      }
     default :
       {
         break;
       }
-      //    case (StepperManual):
-      //      {
-      //        runStepperManualState();
-      //        break;
-      //      }
+
       //    case (SetCoordinates):
       //      {
       //        runSetCoordinatesState();

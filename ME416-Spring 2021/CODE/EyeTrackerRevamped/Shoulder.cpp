@@ -9,7 +9,6 @@
 */
 Shoulder::Shoulder()
 {
-
 }
 
 /*
@@ -30,6 +29,8 @@ void Shoulder::init()
 
   this->zStepper->setMaxSpeed(10000);
   this->zStepper->setAcceleration(1000);
+  
+  this->stepsPerMM = 89;
 }
 
 /*
@@ -98,7 +99,22 @@ bool Shoulder::zeroStepperZ()
     return zeroed;
   }
   bool zeroed = false;
-  return zeroed; 
+  return zeroed;
+}
+
+/*
+  Private helper function to update the current position of the
+  stepper axes in the kinematic chain instance.
+*/
+void Shoulder::updateKinematicChain()
+{
+  // obtaining instance of kinematic chain class
+  // this instance will then help determine the coordinate values
+  // for left and right eyes.
+  KinematicChain* tfMatrix = KinematicChain::getInstance();
+
+  tfMatrix->SetStepperPositions(this->GetStepperPosition('x'), this->GetStepperPosition('y'), this->GetStepperPosition('z'));
+  tfMatrix->UpdateTransformation();
 }
 
 /*
@@ -109,14 +125,48 @@ bool Shoulder::HomeAllSteppers()
 {
   // boolean indicating whether calibration is ongoing.
   bool calibrating = true;
-  
+
   bool xCal = this->zeroStepperX();
   bool yCal = this->zeroStepperY();
   bool zCal = this->zeroStepperZ();
 
+  // if the stepper axes have finished calibrating.
   if (xCal == true && yCal == true && zCal == true)
   {
     calibrating = false;
+    this->updateKinematicChain();
     return calibrating;
+  }
+}
+
+/*
+   Function to move the stepper axes to the desired x,y,z position
+   transmitted through the API.
+*/
+void Shoulder::MoveSteppersToPosition(int x, int y, int z)
+{
+  this->xStepper->moveTo(x * this->stepsPerMM);
+  this->yStepper->moveTo(y * this->stepsPerMM);
+  this->zStepper->moveTo(z * this->stepsPerMM);
+
+  this->xStepper->run();
+  this->yStepper->run();
+  this->zStepper->run();
+}
+
+/*
+   Function get the current position of the desired stepper axes.
+*/
+int Shoulder::GetStepperPosition(char desiredStepper)
+{
+  switch (desiredStepper) {
+    case 'x':
+      return this->xStepper->currentPosition();
+    case 'y':
+      return this->yStepper->currentPosition();
+    case 'z':
+      return this->zStepper->currentPosition();
+    default:
+      return NULL;
   }
 }

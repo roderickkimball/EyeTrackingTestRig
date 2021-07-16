@@ -68,20 +68,11 @@ void Eyes::parallax(BLA::Matrix<4> leftDotPos, BLA::Matrix<4> rightDotPos)
    as a parameter, which is the signal transmitted by the Windows API.
    This character is used as input to the calibration sequence.
 */
-bool Eyes::CalibrateServos(char eyeCalCommand)
+void Eyes::CalibrateServos(char eyeCalCommand)
 {
-  // calibration status boolean
-  bool calibrating = true;
   // Dot position array corresponding to desired screen location
   // set to zero for calibration to calibrate to center of screen.
   BLA::Matrix<4> screenDotPos = {0, 0, 0, 1};
-
-  // if back is pressed then boolean falsified and returned
-  if (eyeCalCommand == 'b')
-  {
-    calibrating = false;
-    return calibrating;
-  }
 
   Serial.println(eyeCalCommand);
   // Eye motor determination
@@ -140,7 +131,6 @@ bool Eyes::CalibrateServos(char eyeCalCommand)
   }
 
   this->ParallaxServosToPos(screenDotPos);
-  return calibrating;
 }
 
 /*

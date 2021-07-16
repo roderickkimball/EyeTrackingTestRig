@@ -40,7 +40,7 @@ class Eyes
   public:
     Eyes();
     void init();
-    bool CalibrateServos(char eyeCalCommand);
+    void CalibrateServos(char eyeCalCommand);
     void ParallaxServosToPos(BLA::Matrix<4> screenDotPos);
 };
 
