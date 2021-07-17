@@ -67,7 +67,7 @@ void Robot::runServoCalibrationState()
   char eyeCalCommand = this->getSerialCommand();
 
   // calling robotEyes object to perform calibration of eyes.
-  this->robotEyes.CalibrateServos(eyeCalCommand);
+  this->robotEyes.CalibrateEyes(eyeCalCommand);
   // if calibration has been stopped, return to MenuMode;
   if (eyeCalCommand == 'b')
   {
@@ -88,7 +88,7 @@ void Robot::runServoManualState()
     this->screenDotPos(0) = goX;
     this->screenDotPos(2) = goZ;
 
-    this->robotEyes.ParallaxServosToPos(this->screenDotPos);
+    this->robotEyes.ParallaxEyesToPos(this->screenDotPos);
   }
   else if (command == 'b') {
     this->SetState(static_cast<int>(MenuMode));
@@ -103,7 +103,7 @@ void Robot::runServoManualState()
 void Robot::runStepperHomeState()
 {
   // Home all steppers function will return false when steppers have finished homing
-  bool calibrating = this->robotShoulder.HomeAllSteppers();
+  bool calibrating = this->robotShoulder.HomeShoulder();
 
   char command = this->getSerialCommand();
 

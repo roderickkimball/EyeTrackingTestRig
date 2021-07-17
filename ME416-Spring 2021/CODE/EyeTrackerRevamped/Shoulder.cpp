@@ -12,6 +12,17 @@ Shoulder::Shoulder()
 }
 
 /*
+   Shoulder class destructor - necessary to free the memory for pointers
+*/
+Shoulder::~Shoulder()
+{
+  delete[] this->xStepper;
+  delete[] this->yStepper;
+  delete[] this->zStepper;
+}
+
+
+/*
    Initialization function for the shoulder object.
 */
 void Shoulder::init()
@@ -29,13 +40,13 @@ void Shoulder::init()
 
   this->zStepper->setMaxSpeed(10000);
   this->zStepper->setAcceleration(1000);
-  
+
   this->stepsPerMM = 89;
 }
 
 /*
    Private helper function to zero stepper X.
-   Referenced by HomeStepper function.
+   Referenced by HomeShoulder function.
 */
 bool Shoulder::zeroStepperX()
 {
@@ -113,7 +124,7 @@ void Shoulder::updateKinematicChain()
   // for left and right eyes.
   KinematicChain* tfMatrix = KinematicChain::getInstance();
 
-  tfMatrix->SetStepperPositions(this->GetStepperPosition('x'), this->GetStepperPosition('y'), this->GetStepperPosition('z'));
+  tfMatrix->SetStepperPositions(this->GetShoulderPosition('x'), this->GetShoulderPosition('y'), this->GetShoulderPosition('z'));
   tfMatrix->UpdateTransformation();
 }
 
@@ -121,7 +132,7 @@ void Shoulder::updateKinematicChain()
    Function to home all the shoulder steppers and
    set their respective starting position.
 */
-bool Shoulder::HomeAllSteppers()
+bool Shoulder::HomeShoulder()
 {
   // boolean indicating whether calibration is ongoing.
   bool calibrating = true;
@@ -143,7 +154,7 @@ bool Shoulder::HomeAllSteppers()
    Function to move the stepper axes to the desired x,y,z position
    transmitted through the API.
 */
-void Shoulder::MoveSteppersToPosition(int x, int y, int z)
+void Shoulder::MoveShoulderToPosition(int x, int y, int z)
 {
   this->xStepper->moveTo(x * this->stepsPerMM);
   this->yStepper->moveTo(y * this->stepsPerMM);
@@ -157,7 +168,7 @@ void Shoulder::MoveSteppersToPosition(int x, int y, int z)
 /*
    Function get the current position of the desired stepper axes.
 */
-int Shoulder::GetStepperPosition(char desiredStepper)
+int Shoulder::GetShoulderPosition(char desiredStepper)
 {
   switch (desiredStepper) {
     case 'x':

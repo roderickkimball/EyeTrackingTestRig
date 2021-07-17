@@ -1,5 +1,6 @@
 /*
-   Eye subsystem class consists of the Servo objects that make up the individual eyes,
+   Eye subsystem class consists of all of the Servo objects that make up the 2 eyes of the robot.
+   The class encapsulates all servos used by both eyes,
    and the center locations in microseconds for those servos. The class has public member functions
    to calibrate the eye subsystem and parallax both eyes to a single point on the screen.
 */
@@ -12,7 +13,10 @@
 #include "Function.h"
 
 /*
-   This enumeration is used in servo calibration to determine which motor is being calibrated
+   This enumeration is used in servo calibration to determine which servo motor, on which side
+   is being calibrated
+   X- horizontal
+   Z- vertical
 */
 enum EyeMotor {
   rightZ = 1,
@@ -40,8 +44,8 @@ class Eyes
   public:
     Eyes();
     void init();
-    void CalibrateServos(char eyeCalCommand);
-    void ParallaxServosToPos(BLA::Matrix<4> screenDotPos);
+    void CalibrateEyes(char eyeCalCommand);
+    void ParallaxEyesToPos(BLA::Matrix<4> screenDotPos);
 };
 
 #endif

@@ -15,6 +15,7 @@
    Shoulder class declaration. The class consists of private stepper objects for each
    shoulder axis. The public functions allow for initialization, homing, manual control and
    accessors for the current position of each stepper.
+   TO_DO: Make destructor for the pointer objects. - in progress
 */
 class Shoulder
 {
@@ -30,10 +31,11 @@ class Shoulder
 
   public:
     Shoulder();
+    ~Shoulder();
     void init();
-    bool HomeAllSteppers();
-    void MoveSteppersToPosition(int x, int y, int z);
-    int GetStepperPosition(char desiredStepper);
+    bool HomeShoulder();
+    void MoveShoulderToPosition(int x, int y, int z);
+    int GetShoulderPosition(char desiredStepper);
 };
 
 #endif

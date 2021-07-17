@@ -68,7 +68,7 @@ void Eyes::parallax(BLA::Matrix<4> leftDotPos, BLA::Matrix<4> rightDotPos)
    as a parameter, which is the signal transmitted by the Windows API.
    This character is used as input to the calibration sequence.
 */
-void Eyes::CalibrateServos(char eyeCalCommand)
+void Eyes::CalibrateEyes(char eyeCalCommand)
 {
   // Dot position array corresponding to desired screen location
   // set to zero for calibration to calibrate to center of screen.
@@ -130,7 +130,7 @@ void Eyes::CalibrateServos(char eyeCalCommand)
     default : break;
   }
 
-  this->ParallaxServosToPos(screenDotPos);
+  this->ParallaxEyesToPos(screenDotPos);
 }
 
 /*
@@ -138,7 +138,7 @@ void Eyes::CalibrateServos(char eyeCalCommand)
    on the screen. Parameter screenDotPos gives the coordinates of
    the desired position.
 */
-void Eyes::ParallaxServosToPos(BLA::Matrix<4> screenDotPos)
+void Eyes::ParallaxEyesToPos(BLA::Matrix<4> screenDotPos)
 {
   // obtaining instance of kinematic chain class
   // this instance will then help determine the coordinate values
