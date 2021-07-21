@@ -23,10 +23,10 @@ void Eyes::init()
   this->xServoR.attach(xRPin);
   this->zServoR.attach(zRPin);
 
-  // 1500 microseconds is about the center for servo objects
+  // 1500 microseconds is about the center for servo objec
   this->lXCenter = 1500;
-  this->rXCenter = 1500;
   this->lZCenter = 1500;
+  this->rXCenter = 1500;
   this->rZCenter = 1500;
 
   this->xServoL.writeMicroseconds(this->lXCenter);
@@ -61,6 +61,52 @@ void Eyes::parallax(BLA::Matrix<4> leftDotPos, BLA::Matrix<4> rightDotPos)
   this->zServoR.writeMicroseconds(this->rZCenter + (betaRight));
   delay(50);
   //Serial.println("moving");
+}
+
+/*
+   Function to write the calibration variables
+   for Eye Servos to EEPROM.
+*/
+void Eyes::WriteEyeCalibrationVariablesToProm()
+{
+  PromAddress eeAddress = LXCenter;
+
+  EEPROM.put(eeAddress, this->lXCenter);
+  eeAddress = (PromAddress)((int)eeAddress + 4);
+  EEPROM.put(eeAddress, this->lZCenter);
+  eeAddress = (PromAddress)((int)eeAddress + 4);
+  EEPROM.put(eeAddress, this->rXCenter);
+  eeAddress = (PromAddress)((int)eeAddress + 4);
+  EEPROM.put(eeAddress, this->rZCenter);
+
+  Serial.println("Eye Calibration Variables written to Prom");
+}
+
+/*
+   Function to read the calibration variables
+   for Eye Servos from EEPROM.
+*/
+void Eyes::ReadEyeCalibrationVariablesFromProm()
+{
+  PromAddress eeAddress = LXCenter; 
+  long int servoCenter = 0.0;
+
+  EEPROM.get(eeAddress, servoCenter);
+  this->lXCenter = servoCenter;
+  eeAddress = (PromAddress)((int)eeAddress + 4);
+
+  EEPROM.get(eeAddress, servoCenter);
+  this->lZCenter = servoCenter;
+  eeAddress = (PromAddress)((int)eeAddress + 4);
+
+  EEPROM.get(eeAddress, servoCenter);
+  this->rXCenter = servoCenter;
+  eeAddress = (PromAddress)((int)eeAddress + 4);
+
+  EEPROM.get(eeAddress, servoCenter);
+  this->rZCenter = servoCenter;
+  
+  Serial.println("Eye Calibration Variables read from Prom"); 
 }
 
 /*

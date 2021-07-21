@@ -24,8 +24,7 @@ int xLPin = 11;
 int zLPin = 5;
 int xRPin = 6;
 int zRPin = 3;
-// Declaring neck servo pins
-int NSPin = 12;
+
 //Declaring Servo relay pin
 int servoRelay = 8;
 
@@ -41,3 +40,13 @@ int yDir = A3;
 int yPulse = A2;
 int zDir = A5;
 int zPulse = A4;
+
+// Declaring Neck stepper Direction and Pulse pins.
+int frontDir = 40; 
+int frontPulse = 42; 
+int backRightDir = 44; 
+int backRightPulse = 46; 
+int backLeftDir = 48;  
+int backLeftPulse = 14; //50 on PCB;
+// Declaring neck servo pins
+int NSPin = 12;

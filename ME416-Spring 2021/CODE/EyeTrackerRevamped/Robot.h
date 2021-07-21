@@ -7,6 +7,7 @@
 #ifndef _ROBOT_H
 #define _ROBOT_H
 
+#include "NeckClass.h"
 #include "EyeSubsystem.h"
 #include "Shoulder.h"
 #include <BasicLinearAlgebra.h>
@@ -25,7 +26,7 @@ class Robot
     StateMachineState robotState;
     Eyes robotEyes;
     Shoulder robotShoulder;
-    //Neck robotNeck;
+    RobotNeck robotNeck;
     BLA::Matrix<4> screenDotPos;
 
     char getSerialCommand();
@@ -33,7 +34,10 @@ class Robot
     void runMenuModeState();
     void runServoCalibrationState();
     void runServoManualState();
-    void runStepperHomeState();
+    void runShoulderHomeState();
+    void runShoulderManualState();
+    void runNeckCalibrationState();
+    void runNeckManualState();
 
 
   public:

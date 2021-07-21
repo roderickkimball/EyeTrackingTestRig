@@ -8,6 +8,7 @@
 #define _SHOULDER_H
 
 #include <AccelStepper.h>
+#include <EEPROM.h>
 #include "KinematicChain.h"
 #include "Function.h"
 
@@ -36,6 +37,8 @@ class Shoulder
     bool HomeShoulder();
     void MoveShoulderToPosition(int x, int y, int z);
     int GetShoulderPosition(char desiredStepper);
+    void WriteShoulderPositionToProm();
+    void ReadShoulderPositionFromProm();
 };
 
 #endif

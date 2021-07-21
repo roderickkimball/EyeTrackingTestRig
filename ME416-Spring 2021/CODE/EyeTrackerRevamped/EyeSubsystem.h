@@ -9,6 +9,7 @@
 #define _EYESUBSYSTEM_H
 
 #include <Servo.h>
+#include <EEPROM.h>
 #include "KinematicChain.h"
 #include "Function.h"
 
@@ -40,11 +41,14 @@ class Eyes
     Servo zServoR;
     long int lXCenter, lZCenter, rXCenter, rZCenter;
     void parallax(BLA::Matrix<4> leftDotPos, BLA::Matrix<4> rightDotPos);
+    void writeEyeCalibrationVariablesToProm();
 
   public:
     Eyes();
     void init();
     void CalibrateEyes(char eyeCalCommand);
+    void WriteEyeCalibrationVariablesToProm();
+    void ReadEyeCalibrationVariablesFromProm();
     void ParallaxEyesToPos(BLA::Matrix<4> screenDotPos);
 };
 

@@ -125,7 +125,7 @@ void Shoulder::updateKinematicChain()
   KinematicChain* tfMatrix = KinematicChain::getInstance();
 
   tfMatrix->SetStepperPositions(this->GetShoulderPosition('x'), this->GetShoulderPosition('y'), this->GetShoulderPosition('z'));
-  tfMatrix->UpdateTransformation();
+  tfMatrix->UpdateKinematicChain();
 }
 
 /*
@@ -180,4 +180,46 @@ int Shoulder::GetShoulderPosition(char desiredStepper)
     default:
       return NULL;
   }
+}
+
+/*
+   Function to write the current shoulder position
+   to the EEPROM
+*/
+void Shoulder::WriteShoulderPositionToProm()
+{
+  PromAddress eeAddress = XStepperPosition;
+
+  EEPROM.put(eeAddress, this->xStepper->currentPosition());
+  eeAddress = (PromAddress)((int)eeAddress + 4);
+
+  EEPROM.put(eeAddress, this->yStepper->currentPosition());
+  eeAddress = (PromAddress)((int)eeAddress + 4);
+
+  EEPROM.put(eeAddress, this->zStepper->currentPosition());
+
+  Serial.println("Shoulder position written to Prom");
+}
+
+/*
+   Function to read the shoulder position
+   from the EEPROM
+*/
+void Shoulder::ReadShoulderPositionFromProm()
+{
+  PromAddress eeAddress = XStepperPosition;
+  long int stepperPosition = 0;
+
+  EEPROM.get(eeAddress, stepperPosition);
+  this->xStepper->setCurrentPosition(stepperPosition);
+  eeAddress = (PromAddress)((int)eeAddress + 4);
+
+  EEPROM.get(eeAddress, stepperPosition);
+  this->yStepper->setCurrentPosition(stepperPosition);
+  eeAddress = (PromAddress)((int)eeAddress + 4);
+
+  EEPROM.get(eeAddress, stepperPosition);
+  this->zStepper->setCurrentPosition(stepperPosition);
+
+  this->updateKinematicChain();
 }

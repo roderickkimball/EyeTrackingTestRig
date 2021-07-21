@@ -23,7 +23,16 @@ void Robot::init()
 {
   this->robotEyes.init();
   this->robotShoulder.init();
-  Serial.println("Finished Eye init");
+  this->robotNeck.init();
+
+  this->robotEyes.ReadEyeCalibrationVariablesFromProm();
+  
+  this->robotShoulder.ReadShoulderPositionFromProm();
+  
+  this->robotNeck.ReadNeckPositionFromProm('c');
+  this->robotNeck.ReadNeckPositionFromProm('l');
+
+  Serial.println("Finished ROBOT init");
 }
 
 /*
@@ -71,6 +80,7 @@ void Robot::runServoCalibrationState()
   // if calibration has been stopped, return to MenuMode;
   if (eyeCalCommand == 'b')
   {
+    this->robotEyes.WriteEyeCalibrationVariablesToProm();
     this->SetState(static_cast<int>(MenuMode));
   }
 }
@@ -96,11 +106,11 @@ void Robot::runServoManualState()
 }
 
 /*
-   Stepper Home state will home the steppers. Homing the steppers will include moving the
+   Shoulder Home state will home the steppers. Homing the steppers will include moving the
    steppers till they hit the limit switches. Hitting the limit switches will reset the zero locations
    of the steppers.
 */
-void Robot::runStepperHomeState()
+void Robot::runShoulderHomeState()
 {
   // Home all steppers function will return false when steppers have finished homing
   bool calibrating = this->robotShoulder.HomeShoulder();
@@ -110,6 +120,49 @@ void Robot::runStepperHomeState()
 
   if (command == 'b' || calibrating == false)
   {
+    this->robotShoulder.WriteShoulderPositionToProm();
+    this->SetState(static_cast<int>(MenuMode));
+  }
+}
+
+/*
+   Shoulder Manual state will allow the user to obtain manual control of the shoulder
+   steppers.
+*/
+void Robot::runShoulderManualState()
+{
+  char command = this->getSerialCommand();
+
+  if (command == 'g') {
+    int goX = SerialTerminal->parseInt();
+    int goY = SerialTerminal->parseInt();
+    int goZ = SerialTerminal->parseInt();
+
+    this->robotShoulder.MoveShoulderToPosition(goX, goY, goZ);
+  }
+  else if (command == 'b') {
+    this->robotShoulder.WriteShoulderPositionToProm();
+    this->SetState(static_cast<int>(MenuMode));
+  }
+}
+
+/*
+   Function to obtain calibration commands for the neck from the API
+   and subsequently pass them onto the neck object.
+*/
+void Robot::runNeckCalibrationState()
+{
+  char neckCalCommand = this->getSerialCommand();
+
+  // calling robotEyes object to perform calibration of eyes.
+  this->robotNeck.CalibrateNeck(neckCalCommand);
+  // if calibration has been stopped, return to MenuMode;
+  if (neckCalCommand == 'b')
+  {
+    // writing calibration variables to prom
+    this->robotNeck.WriteNeckPositionToProm('c');
+    // writing last neck position variables to prom
+    this->robotNeck.WriteNeckPositionToProm('l');
     this->SetState(static_cast<int>(MenuMode));
   }
 }
@@ -157,12 +210,23 @@ void Robot::RunState()
       }
     case (StepperHome):
       {
-        (this)->runStepperHomeState();
+        (this)->runShoulderHomeState();
         break;
       }
     case (StepperManual):
       {
-        //(this)->runStepperManualState();
+        (this)->runShoulderManualState();
+        break;
+      }
+    case (NeckCalibration):
+      {
+        (this)->runNeckCalibrationState();
+        break;
+      }
+    case (MoveToCalibrationState):
+      {
+        (this)->robotNeck.MoveToCalibratedPosition();
+        this->SetState(static_cast<int>(MenuMode));
         break;
       }
     default :
@@ -185,16 +249,8 @@ void Robot::RunState()
       //        runAutoState();
       //        break;
       //      }
-      //    case (NeckCalibration):
-      //      {
-      //        runNeckCalibrationState();
-      //        break;
-      //      }
-      //    case (MoveToCalibrationState):
-      //      {
-      //        runMoveToCalibrationState();
-      //        break;
-      //      }
+
+
       //    case (Neck):
       //      {
       //        runNeckState();

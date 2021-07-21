@@ -17,6 +17,7 @@
 #include <BasicLinearAlgebra.h>
 
 #include <AccelStepper.h>
+#include <EEPROM.h>
 
 // state machine enumeration.
 enum StateMachineState {
@@ -32,6 +33,23 @@ enum StateMachineState {
   MoveToCalibrationState = 9,
   Neck = 10,
   SpinnyBoi = 11,
+};
+
+// EEPROM address enumeration.
+enum PromAddress {
+  LXCenter = 12,
+  LZCenter = 16,
+  RXCenter = 20,
+  RZCenter = 24,
+  XStepperPosition = 0,
+  YStepperPosition = 4,
+  ZStepperPosition = 8,
+  FrontNeckLastStepperPosition = 28,
+  BackRightNeckLastStepperPosition = 32,
+  BackLeftNeckLastStepperPosition = 36,
+  FrontNeckCalibrationStepperPosition = 40,
+  BackRightNeckCalibrationStepperPosition = 44,
+  BackLeftNeckCalibrationStepperPosition = 48,  
 };
 
 // declaring global variables as extern. They are declared
@@ -56,8 +74,7 @@ extern int xLPin;
 extern int zLPin;
 extern int xRPin;
 extern int zRPin;
-// Declaring neck servo pins
-extern int NSPin;
+
 // Declaring Servo Relat Pin
 extern int servoRelay;
 
@@ -73,5 +90,17 @@ extern int yDir;
 extern int yPulse;
 extern int zDir;
 extern int zPulse;
+
+// Declaring the Neck Stepper Direction and Pulse Pins.
+
+// NECK Stepper Direction and Pulse Pins
+extern int frontDir; 
+extern int frontPulse; 
+extern int backRightDir; 
+extern int backRightPulse; 
+extern int backLeftDir;  
+extern int backLeftPulse; //50 on PCB;
+// Declaring neck servo pins
+extern int NSPin;
 
 #endif
