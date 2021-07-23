@@ -33,15 +33,15 @@ void Shoulder::init()
 
   // setting default max speed and acceleration for stepper objects
   this->xStepper->setMaxSpeed(10000);
-  this->xStepper->setAcceleration(1000);
+  this->xStepper->setAcceleration(2000);
 
   this->yStepper->setMaxSpeed(10000);
-  this->yStepper->setAcceleration(1000);
+  this->yStepper->setAcceleration(2000);
 
   this->zStepper->setMaxSpeed(10000);
-  this->zStepper->setAcceleration(1000);
+  this->zStepper->setAcceleration(2000);
 
-  this->stepsPerMM = 89;
+  this->stepsPerM = 89000;
 }
 
 /*
@@ -54,8 +54,7 @@ bool Shoulder::zeroStepperX()
 
   if (limitSwitchState == HIGH)
   {
-    this->xStepper->move(-1000);
-    this->xStepper->run();
+    this->xStepper->move(5000);
   }
   else if (limitSwitchState == LOW)
   {
@@ -77,8 +76,7 @@ bool Shoulder::zeroStepperY()
 
   if (limitSwitchState == HIGH)
   {
-    this->yStepper->move(-1000);
-    this->yStepper->run();
+    this->yStepper->move(5000);
   }
   else if (limitSwitchState == LOW)
   {
@@ -100,8 +98,7 @@ bool Shoulder::zeroStepperZ()
 
   if (limitSwitchState == HIGH)
   {
-    this->zStepper->move(1000);
-    this->zStepper->run();
+    this->zStepper->move(5000);
   }
   else if (limitSwitchState == LOW)
   {
@@ -117,15 +114,16 @@ bool Shoulder::zeroStepperZ()
   Private helper function to update the current position of the
   stepper axes in the kinematic chain instance.
 */
-void Shoulder::updateKinematicChain()
+void Shoulder::updateShoulderPositions()
 {
   // obtaining instance of kinematic chain class
   // this instance will then help determine the coordinate values
   // for left and right eyes.
   KinematicChain* tfMatrix = KinematicChain::getInstance();
 
-  tfMatrix->SetStepperPositions(this->GetShoulderPosition('x'), this->GetShoulderPosition('y'), this->GetShoulderPosition('z'));
-  tfMatrix->UpdateKinematicChain();
+  // When shoulders move from their home position, all positions are -ve, so we have to invert this
+  // for the kinematic chain
+  tfMatrix->SetStepperPositions(-(this->GetShoulderPosition('x')), -(this->GetShoulderPosition('y')), -(this->GetShoulderPosition('z')));
 }
 
 /*
@@ -137,46 +135,56 @@ bool Shoulder::HomeShoulder()
   // boolean indicating whether calibration is ongoing.
   bool calibrating = true;
 
-  bool xCal = this->zeroStepperX();
   bool yCal = this->zeroStepperY();
-  bool zCal = this->zeroStepperZ();
+  this->yStepper->run();
+
+  bool xCal, zCal;
+
+  if (yCal == true) {
+    xCal = this->zeroStepperX();
+    zCal = this->zeroStepperZ();
+
+    this->xStepper->run();
+    this->zStepper->run();
+  }
 
   // if the stepper axes have finished calibrating.
   if (xCal == true && yCal == true && zCal == true)
   {
     calibrating = false;
-    this->updateKinematicChain();
+    this->updateShoulderPositions();
     return calibrating;
   }
+  return calibrating;
 }
 
 /*
    Function to move the stepper axes to the desired x,y,z position
    transmitted through the API.
 */
-void Shoulder::MoveShoulderToPosition(int x, int y, int z)
+void Shoulder::MoveShoulderToPosition(float x, float y, float z)
 {
-  this->xStepper->moveTo(x * this->stepsPerMM);
-  this->yStepper->moveTo(y * this->stepsPerMM);
-  this->zStepper->moveTo(z * this->stepsPerMM);
+  this->xStepper->runToNewPosition(x * this->stepsPerM);
+  this->yStepper->runToNewPosition(y * this->stepsPerM);
+  this->zStepper->runToNewPosition(z * this->stepsPerM);
 
-  this->xStepper->run();
-  this->yStepper->run();
-  this->zStepper->run();
+  this->updateShoulderPositions();
+
+  //SerialTerminal->println(this->xStepper->currentPosition());
 }
 
 /*
    Function get the current position of the desired stepper axes.
 */
-int Shoulder::GetShoulderPosition(char desiredStepper)
+float Shoulder::GetShoulderPosition(char desiredStepper)
 {
   switch (desiredStepper) {
     case 'x':
-      return this->xStepper->currentPosition();
+      return (this->xStepper->currentPosition() / this->stepsPerM);
     case 'y':
-      return this->yStepper->currentPosition();
+      return (this->yStepper->currentPosition() / this->stepsPerM);
     case 'z':
-      return this->zStepper->currentPosition();
+      return (this->zStepper->currentPosition() / this->stepsPerM);
     default:
       return NULL;
   }
@@ -198,7 +206,7 @@ void Shoulder::WriteShoulderPositionToProm()
 
   EEPROM.put(eeAddress, this->zStepper->currentPosition());
 
-  Serial.println("Shoulder position written to Prom");
+  SerialTerminal->println("Shoulder position written to Prom");
 }
 
 /*
@@ -214,6 +222,8 @@ void Shoulder::ReadShoulderPositionFromProm()
   this->xStepper->setCurrentPosition(stepperPosition);
   eeAddress = (PromAddress)((int)eeAddress + 4);
 
+  SerialTerminal->println(stepperPosition);
+
   EEPROM.get(eeAddress, stepperPosition);
   this->yStepper->setCurrentPosition(stepperPosition);
   eeAddress = (PromAddress)((int)eeAddress + 4);
@@ -221,5 +231,7 @@ void Shoulder::ReadShoulderPositionFromProm()
   EEPROM.get(eeAddress, stepperPosition);
   this->zStepper->setCurrentPosition(stepperPosition);
 
-  this->updateKinematicChain();
+  SerialTerminal->println("Shoulder positions read from Prom");
+
+  this->updateShoulderPositions();
 }

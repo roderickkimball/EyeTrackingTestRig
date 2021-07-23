@@ -31,6 +31,8 @@ class Robot
 
     char getSerialCommand();
 
+    void updateKinematicChain();
+
     void runMenuModeState();
     void runServoCalibrationState();
     void runServoManualState();

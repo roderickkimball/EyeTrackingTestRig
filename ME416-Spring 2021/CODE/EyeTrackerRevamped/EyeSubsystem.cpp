@@ -6,6 +6,11 @@
 EyeMotor calibrationMotor = rightZ;
 
 /*
+   Microseconds increment required for 1 degree motion of the eyes
+*/
+float microSecondsPerDegree = 10.20408163;
+
+/*
    Eye class constructor.
 */
 Eyes::Eyes()
@@ -23,7 +28,7 @@ void Eyes::init()
   this->xServoR.attach(xRPin);
   this->zServoR.attach(zRPin);
 
-  // 1500 microseconds is about the center for servo objec
+  // 1500 microseconds is the default center for servo objects
   this->lXCenter = 1500;
   this->lZCenter = 1500;
   this->rXCenter = 1500;
@@ -34,7 +39,7 @@ void Eyes::init()
   this->xServoR.writeMicroseconds(this->rXCenter);
   this->zServoR.writeMicroseconds(this->rZCenter);
 
-  Serial.println("Finished setting up eyes");
+  SerialTerminal->println("Finished setting up eyes");
 }
 
 /*
@@ -49,18 +54,18 @@ void Eyes::parallax(BLA::Matrix<4> leftDotPos, BLA::Matrix<4> rightDotPos)
 
   // calculating angles of rotation for the right eye
   float alphaRight  = atan2(rightDotPos(1), rightDotPos(0)) * (180 / 3.14159);
-  float betaRight = atan2(rightDotPos(2), sqrt((rightDotPos(0) * rightDotPos(0)) + (rightDotPos(1) * rightDotPos(1))));
+  float betaRight = atan2(rightDotPos(2), sqrt((rightDotPos(0) * rightDotPos(0)) + (rightDotPos(1) * rightDotPos(1)))) * (180 / 3.14159);
 
   // writing the angle values to the X and Z servos.
-  this->xServoL.writeMicroseconds(this->lXCenter + (90 - alphaLeft));
+  this->xServoL.writeMicroseconds(this->lXCenter + (90 - alphaLeft) * microSecondsPerDegree);
   //delay(50);
-  this->zServoL.writeMicroseconds(this->lZCenter + (betaLeft));
+  this->zServoL.writeMicroseconds(this->lZCenter + (betaLeft) * microSecondsPerDegree);
   //delay(50);
-  this->xServoR.writeMicroseconds(this->rXCenter + (90 - alphaRight));
+  this->xServoR.writeMicroseconds(this->rXCenter + (90 - alphaRight) * microSecondsPerDegree);
   //delay(50);
-  this->zServoR.writeMicroseconds(this->rZCenter + (betaRight));
+  this->zServoR.writeMicroseconds(this->rZCenter + (betaRight) * microSecondsPerDegree);
   delay(50);
-  //Serial.println("moving");
+  //SerialTerminal->println("moving");
 }
 
 /*
@@ -79,7 +84,7 @@ void Eyes::WriteEyeCalibrationVariablesToProm()
   eeAddress = (PromAddress)((int)eeAddress + 4);
   EEPROM.put(eeAddress, this->rZCenter);
 
-  Serial.println("Eye Calibration Variables written to Prom");
+  SerialTerminal->println("Eye Calibration Variables written to Prom");
 }
 
 /*
@@ -88,7 +93,7 @@ void Eyes::WriteEyeCalibrationVariablesToProm()
 */
 void Eyes::ReadEyeCalibrationVariablesFromProm()
 {
-  PromAddress eeAddress = LXCenter; 
+  PromAddress eeAddress = LXCenter;
   long int servoCenter = 0.0;
 
   EEPROM.get(eeAddress, servoCenter);
@@ -105,8 +110,8 @@ void Eyes::ReadEyeCalibrationVariablesFromProm()
 
   EEPROM.get(eeAddress, servoCenter);
   this->rZCenter = servoCenter;
-  
-  Serial.println("Eye Calibration Variables read from Prom"); 
+
+  SerialTerminal->println("Eye Calibration Variables read from Prom");
 }
 
 /*
@@ -120,7 +125,7 @@ void Eyes::CalibrateEyes(char eyeCalCommand)
   // set to zero for calibration to calibrate to center of screen.
   BLA::Matrix<4> screenDotPos = {0, 0, 0, 1};
 
-  Serial.println(eyeCalCommand);
+  //SerialTerminal->println(eyeCalCommand);
   // Eye motor determination
   if (eyeCalCommand == 'r') {
     if (calibrationMotor == leftX) calibrationMotor = rightX;

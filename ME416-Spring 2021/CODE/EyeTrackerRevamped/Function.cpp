@@ -16,7 +16,7 @@ XBOXONE Xbox(&Usb);
 // String array containing state names corresponding
 // to enumeration.
 String stateNames[12] = {"MenuMode", "ServoCalibration", "Auto", "StepperHome", "StepperManual", "FindCoordinates",
-                         "SetCoordinates", "StepperManual", "NeckCalibration", "MoveToCalibrationState", "Neck", "SpinnyBoi"
+                         "SetCoordinates", "ServoManual", "NeckCalibration", "MoveToCalibrationState", "Neck", "SpinnyBoi"
                         };
 
 // Declare Servo Pins - check wiring diagram if you have any questions
@@ -49,4 +49,4 @@ int backRightPulse = 46;
 int backLeftDir = 48;  
 int backLeftPulse = 14; //50 on PCB;
 // Declaring neck servo pins
-int NSPin = 12;
+int neckServoPin = 12;

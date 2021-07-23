@@ -9,6 +9,7 @@
 #define _KINEMATICCHAIN_H
 
 #include <BasicLinearAlgebra.h>
+#include "Function.h"
 
 /*
    Kinematic chain class made according to singleton pattern.
@@ -49,6 +50,7 @@ class KinematicChain
       stages of the 3-axis shoulder steppers hit the limit switches or zero position
       C - will be the origin frame of reference located at the center of the Z-axis stage,
       that the neck and eye mechanisms are mounted to.
+      Y - will be the frame of reference located at the center of the yaw rotation servo.
       N - will be the frame of reference located at the base of the neck of the robot.
       T - will be the frame of reference located at the center of the top of the neck.
       D - will be the frame of reference at the center of the eye mechanisms,
@@ -59,7 +61,7 @@ class KinematicChain
       and is aligned with D frame when the 90-degree angle is commanded
     */
   protected:
-    BLA::Matrix<4, 4> gBS, gBC, gCN, gNT, gTD, gDL, gDR, gSL, gSR;
+    BLA::Matrix<4, 4> gBS, gBC, gCY, gYN, gNT, gTD, gDL, gDR, gSL, gSR;
 
     /*
        Now we define the transformation matrices for the neck.
@@ -78,9 +80,9 @@ class KinematicChain
   public:
     static KinematicChain* getInstance();
 
-    void SetStepperPositions(int x, int y, int z);
+    void SetStepperPositions(float x, float y, float z);
     
-    void UpdateNeckTransformationMatrix(float PhiR, float PhiS, float lSpring);
+    void UpdateNeckTransformationMatrix(float PhiR, float PhiS, float PhiD, float lSpring);
     
     void UpdateKinematicChain();
     BLA::Matrix<4, 4> GetSL();
@@ -88,6 +90,7 @@ class KinematicChain
     BLA::Matrix<4, 4> GetgB1P1();
     BLA::Matrix<4, 4> GetgB2P2();
     BLA::Matrix<4, 4> GetgB3P3();
+    void PrintG(BLA::Matrix<4,4> g);
 };
 
 #endif

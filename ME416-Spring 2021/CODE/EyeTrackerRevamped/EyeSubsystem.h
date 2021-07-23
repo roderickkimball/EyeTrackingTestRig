@@ -27,6 +27,8 @@ enum EyeMotor {
 };
 extern EyeMotor calibrationMotor;
 
+extern float microSecondsPerDegree; 
+
 /*
    Eye class declaration consisting of private and public member functions.
    Private - Servo objects, calibration motor and center locations
@@ -41,7 +43,6 @@ class Eyes
     Servo zServoR;
     long int lXCenter, lZCenter, rXCenter, rZCenter;
     void parallax(BLA::Matrix<4> leftDotPos, BLA::Matrix<4> rightDotPos);
-    void writeEyeCalibrationVariablesToProm();
 
   public:
     Eyes();

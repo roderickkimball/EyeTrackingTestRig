@@ -49,7 +49,8 @@ enum PromAddress {
   BackLeftNeckLastStepperPosition = 36,
   FrontNeckCalibrationStepperPosition = 40,
   BackRightNeckCalibrationStepperPosition = 44,
-  BackLeftNeckCalibrationStepperPosition = 48,  
+  BackLeftNeckCalibrationStepperPosition = 48,
+  YawServoCalibrationCenter = 52,
 };
 
 // declaring global variables as extern. They are declared
@@ -101,6 +102,6 @@ extern int backRightPulse;
 extern int backLeftDir;  
 extern int backLeftPulse; //50 on PCB;
 // Declaring neck servo pins
-extern int NSPin;
+extern int neckServoPin;
 
 #endif

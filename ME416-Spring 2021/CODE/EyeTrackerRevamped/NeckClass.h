@@ -10,6 +10,7 @@
 #include <AccelStepper.h>
 #include "Function.h"
 #include "KinematicChain.h"
+#include <Servo.h>
 
 /*
    Additional variables that will be used by the neck
@@ -19,6 +20,7 @@ enum NeckMotor {
   front = 1, 
   backRight = 2,
   backLeft = 3,
+  yawServo = 4,
 };
 extern NeckMotor neckCalibrationMotor; 
 
@@ -26,6 +28,8 @@ extern NeckMotor neckCalibrationMotor;
 extern float knownStepperPos;
 // Stepper configuration variables
 extern float spoolRadius, spoolCircumference, mmPerRevs, stepsPerRev, mmPerStep;
+// Neck Servo microsecondsPerDegree
+extern float yawMicroSecondsPerDegree;
 
 /*
    Neck class declaration. This object encapsulates the entire
@@ -37,6 +41,9 @@ class RobotNeck
     // private member variables
     // AccelStepper objects for 3 stepper motors of neck
     AccelStepper *frontStepper, *backRightStepper, *backLeftStepper;
+
+    Servo neckServo;
+    long int neckServoCenter;
     
     // front stepper last recorded position and calibration position
     float lastStepperPosFront, calibrationStepperPosFront;
@@ -54,7 +61,7 @@ class RobotNeck
     void init();
     void CalibrateNeck(char neckCalCommand);
     void MoveToCalibratedPosition();
-    void MoveNeckManually(float x, float y);
+    void MoveNeckManually(float x, float y, float z);
     void WriteNeckPositionToProm(char calibrationOrLastPosition);
     void ReadNeckPositionFromProm(char calibrationOrLastPosition);
 

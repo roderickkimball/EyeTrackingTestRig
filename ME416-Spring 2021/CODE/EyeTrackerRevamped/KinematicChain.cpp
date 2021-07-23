@@ -3,18 +3,21 @@
 /*
    Kinematic Chain class constructor.
    Sets all the transformation matrices to default values.
+   All dimensions are in meters.
 */
 KinematicChain::KinematicChain()
 {
-  this->gBS = xform(0, 0, 0, (141.23), 562, (231.23));
+  this->gBS = xform(0, 0, 0, (0.14123), 0.562, (0.23123));
   this->gBC = xform(0, 0, 0, 0, 0, 0);
+  // should be replaced with actual coordinates from gantry to center of servo
+  this->gCY = xform(0, 0, 0, 0, (0.0956), (0.0129));
   // should be replaced with actual coordinates from gantry to base of neck
-  this->gCN = xform(0, 0, 0, 0, 0, 0);
+  this->gYN = xform(0, 0, 0, 0, (-0.0001), (0.0672));
   // should be replaced with actual coordinates from base of neck to middle of eyes
   this->gNT = xform(0, 0, 0, 0, 0, 0);
-  this->gTD = xform(0, 0, 0, 0, 0, 0);
-  this->gDL = xform(0, 0, 0, (-34.75), 0, 0);
-  this->gDR = xform(0, 0, 0, (34.75), 0, 0);
+  this->gTD = xform(0, 0, 0, (-0.004), (0.0636), (0.0856));
+  this->gDL = xform(0, 0, 0, (-0.03475), 0, 0);
+  this->gDR = xform(0, 0, 0, (0.03475), 0, 0);
 
   // declaring the constant transformation matrices for the neck
   // these transformation matrices will not get updated throughout the program.
@@ -43,8 +46,8 @@ KinematicChain::KinematicChain()
                   0.0, 0.0, 1.0, 0.0,
                   0.0, 0.0, 0.0, 1.0
                  };
-  this->gPC_P3 = {1.0, 0.0, 0.0, 0.06 * cos(2 * 3.14159 / 3),
-                  0.0, 1.0, 0.0, 0.06 * sin(2 * 3.14159 / 3),
+  this->gPC_P3 = {1.0, 0.0, 0.0, 0.06 * cos(2 * 2 * 3.14159 / 3),
+                  0.0, 1.0, 0.0, 0.06 * sin(2 * 2 * 3.14159 / 3),
                   0.0, 0.0, 1.0, 0.0,
                   0.0, 0.0, 0.0, 1.0
                  };
@@ -55,8 +58,8 @@ KinematicChain::KinematicChain()
 
   // these two are the matrices of interest and contain all the information
   // for going from the eyes of the robot to the screen.
-  this->gSL = gDL.Inverse() * gTD.Inverse() * gNT.Inverse() * gCN.Inverse() * gBC.Inverse() * gBS;
-  this->gSR = gDR.Inverse() * gTD.Inverse() * gNT.Inverse() * gCN.Inverse() * gBC.Inverse() * gBS;
+  this->gSL = gDL.Inverse() * gTD.Inverse() * gNT.Inverse() * gYN.Inverse() *  gCY.Inverse() * gBC.Inverse() * gBS;
+  this->gSR = gDR.Inverse() * gTD.Inverse() * gNT.Inverse() * gYN.Inverse() *  gCY.Inverse() * gBC.Inverse() * gBS;
 }
 
 // Defining the static KinematicChain pointer to null
@@ -79,8 +82,7 @@ BLA::Matrix<3, 3> KinematicChain::eye()
 }
 
 /*
-   Function to create a 3x3 matrix from the given
-   3x1 matrix
+   Function to produce the project matrix or hat of a vector
 */
 BLA::Matrix<3, 3> KinematicChain::hat(BLA::Matrix<3> v)
 {
@@ -224,16 +226,16 @@ KinematicChain* KinematicChain::getInstance()
    Function to update the class instance with new stepper
    positions after movement.
 */
-void KinematicChain::SetStepperPositions(int x, int y, int z)
+void KinematicChain::SetStepperPositions(float x, float y, float z)
 {
-  this->gBC = xform(0, 0, 0, x, y, z);
+  this->gBC = xform(0, 0, 0, x, -y, z);
 }
 
 /*
    Function to update the transformation matrices that go
    from the base of the neck to the top of the neck.
 */
-void KinematicChain::UpdateNeckTransformationMatrix(float PhiR, float PhiS, float lSpring)
+void KinematicChain::UpdateNeckTransformationMatrix(float PhiR, float PhiS, float PhiD, float lSpring)
 {
   // getting the matrices that will be raised to the exponent in the next step.
   BLA::Matrix<6> xI01 = {0.0, 0.0, 0.0, 0.0, 0.0, 1.0};
@@ -245,13 +247,14 @@ void KinematicChain::UpdateNeckTransformationMatrix(float PhiR, float PhiS, floa
   BLA::Matrix<4, 4> g02 = expmXI(xI12 * lSpring);
   BLA::Matrix<4, 4> g03 = expmXI(xI23 * (-PhiS));
 
+  this->gYN = expmXI(xI01 * PhiD);
   this->gNT = g01 * g02 * g03;
 
-  this->gB1_P1 = gO_B1.Inverse() * gNT * gPC_P1;
-  this->gB2_P2 = gO_B2.Inverse() * gNT * gPC_P2;
-  this->gB3_P3 = gO_B3.Inverse() * gNT * gPC_P3;
+  this->gB1_P1 = this->gO_B1.Inverse() * this->gNT * this->gPC_P1;
+  this->gB2_P2 = this->gO_B2.Inverse() * this->gNT * this->gPC_P2;
+  this->gB3_P3 = this->gO_B3.Inverse() * this->gNT * this->gPC_P3;
 
-  Serial.println("Updated Neck Transformation Matrices.");
+  SerialTerminal->println("Updated Neck Transformation Matrices.");
 }
 
 /*
@@ -260,8 +263,18 @@ void KinematicChain::UpdateNeckTransformationMatrix(float PhiR, float PhiS, floa
 */
 void KinematicChain::UpdateKinematicChain()
 {
-  this->gSL = gDL.Inverse() * gTD.Inverse() * gNT.Inverse() * gCN.Inverse() * gBC.Inverse() * gBS;
-  this->gSR = gDR.Inverse() * gTD.Inverse() * gNT.Inverse() * gCN.Inverse() * gBC.Inverse() * gBS;
+  this->gSL = gDL.Inverse() * gTD.Inverse() * gNT.Inverse() * gYN.Inverse() * gCY.Inverse() * gBC.Inverse() * gBS;
+  this->gSR = gDR.Inverse() * gTD.Inverse() * gNT.Inverse() * gYN.Inverse() * gCY.Inverse() * gBC.Inverse() * gBS;
+
+  this->PrintG(this->gBC);
+  SerialTerminal->println(" ");
+  this->PrintG(this->gNT);
+  SerialTerminal->println(" ");
+  this->PrintG(this->gSL);
+  SerialTerminal->println(" ");
+  this->PrintG(this->gSR);
+
+  SerialTerminal->println("Updated Kinematic Chain");
 }
 
 /*
@@ -302,4 +315,22 @@ BLA::Matrix<4, 4> KinematicChain::GetgB2P2()
 BLA::Matrix<4, 4> KinematicChain::GetgB3P3()
 {
   return this->gB3_P3;
+}
+
+/*
+   Function to print a 4x4 BLA matrix passed in
+   as argument.
+*/
+void KinematicChain::PrintG(BLA::Matrix<4,4> g)
+{
+  for (int i = 0; i < 4; i++)
+  {
+    for (int j = 0; j < 4; j++)
+    {
+      float x = g(i,j);
+      SerialTerminal->print(x,6);
+      SerialTerminal->print("     ");
+    }
+    SerialTerminal->println(" ");
+  }
 }

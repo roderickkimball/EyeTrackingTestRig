@@ -12,7 +12,7 @@ Robot::Robot()
 {
   this->robotState = MenuMode;
   this->screenDotPos = {0, 0, 0, 1};
-  Serial.println("Created Robot Object");
+  SerialTerminal->println("Created Robot Object");
 }
 
 /*
@@ -26,13 +26,15 @@ void Robot::init()
   this->robotNeck.init();
 
   this->robotEyes.ReadEyeCalibrationVariablesFromProm();
-  
+
   this->robotShoulder.ReadShoulderPositionFromProm();
-  
+
   this->robotNeck.ReadNeckPositionFromProm('c');
   this->robotNeck.ReadNeckPositionFromProm('l');
 
-  Serial.println("Finished ROBOT init");
+  this->updateKinematicChain();
+
+  SerialTerminal->println("Finished ROBOT init");
 }
 
 /*
@@ -46,6 +48,21 @@ char Robot::getSerialCommand()
     command = SerialTerminal->read();
   }
   return command;
+}
+
+/*
+   Function that will be used to update the kinematic chain instance.
+   Calling this function will recalculate the entire kinematic chain for the robot
+   going from the eyes to the screen. Therefore this function must be called whenever the robot has moved.
+*/
+void Robot::updateKinematicChain()
+{
+  // obtaining instance of kinematic chain class
+  // this instance will then help determine the coordinate values
+  // for left and right eyes.
+  KinematicChain* tfMatrix = KinematicChain::getInstance();
+
+  tfMatrix->UpdateKinematicChain();
 }
 
 /*
@@ -93,8 +110,8 @@ void Robot::runServoManualState()
   char command = this->getSerialCommand();
 
   if (command == 'g') {
-    int goX = SerialTerminal->parseInt();
-    int goZ = SerialTerminal->parseInt();
+    float goX = SerialTerminal->parseFloat();
+    float goZ = SerialTerminal->parseFloat();
     this->screenDotPos(0) = goX;
     this->screenDotPos(2) = goZ;
 
@@ -120,6 +137,7 @@ void Robot::runShoulderHomeState()
 
   if (command == 'b' || calibrating == false)
   {
+    this->updateKinematicChain();
     this->robotShoulder.WriteShoulderPositionToProm();
     this->SetState(static_cast<int>(MenuMode));
   }
@@ -134,13 +152,16 @@ void Robot::runShoulderManualState()
   char command = this->getSerialCommand();
 
   if (command == 'g') {
-    int goX = SerialTerminal->parseInt();
-    int goY = SerialTerminal->parseInt();
-    int goZ = SerialTerminal->parseInt();
+    float goX = SerialTerminal->parseFloat();
+    float goY = SerialTerminal->parseFloat();
+    float goZ = SerialTerminal->parseFloat();
 
-    this->robotShoulder.MoveShoulderToPosition(goX, goY, goZ);
+    // When shoulders move from their home position, all positions are -ve, so we have to invert the values
+    // so the input from API can be positive.
+    this->robotShoulder.MoveShoulderToPosition(-goX, -goY, -goZ);
   }
   else if (command == 'b') {
+    this->updateKinematicChain();
     this->robotShoulder.WriteShoulderPositionToProm();
     this->SetState(static_cast<int>(MenuMode));
   }
@@ -159,9 +180,35 @@ void Robot::runNeckCalibrationState()
   // if calibration has been stopped, return to MenuMode;
   if (neckCalCommand == 'b')
   {
+    this->updateKinematicChain();
     // writing calibration variables to prom
     this->robotNeck.WriteNeckPositionToProm('c');
     // writing last neck position variables to prom
+    this->robotNeck.WriteNeckPositionToProm('l');
+    this->SetState(static_cast<int>(MenuMode));
+  }
+}
+
+/*
+   Function to obtain manual control of the neck.
+   X and Y positions have to be scaled between -1.0 and 1.0
+*/
+void Robot::runNeckManualState()
+{
+  char command = this->getSerialCommand();
+
+  if (command == 'g')
+  {
+    float goX = SerialTerminal->parseFloat();
+    float goY = SerialTerminal->parseFloat();
+    float goZ = SerialTerminal->parseFloat();
+
+    this->robotNeck.MoveNeckManually(goX, goY, goZ);
+  }
+
+  else if (command == 'b')
+  {    
+    this->updateKinematicChain();
     this->robotNeck.WriteNeckPositionToProm('l');
     this->SetState(static_cast<int>(MenuMode));
   }
@@ -173,7 +220,7 @@ void Robot::runNeckCalibrationState()
 void Robot::SetState(int stateNumber)
 {
   this->robotState = static_cast<StateMachineState>(stateNumber);
-  Serial.println("Set New State");
+  SerialTerminal->println("Set New State");
 }
 
 /*
@@ -182,7 +229,7 @@ void Robot::SetState(int stateNumber)
 int Robot::GetState()
 {
   return static_cast<int>(this->robotState);
-  Serial.println("Current State is " + String(this->robotState));
+  SerialTerminal->println("Current State is " + String(this->robotState));
 }
 
 /*
@@ -226,7 +273,13 @@ void Robot::RunState()
     case (MoveToCalibrationState):
       {
         (this)->robotNeck.MoveToCalibratedPosition();
+        this->updateKinematicChain();
         this->SetState(static_cast<int>(MenuMode));
+        break;
+      }
+    case (Neck):
+      {
+        (this)->runNeckManualState();
         break;
       }
     default :
@@ -251,11 +304,7 @@ void Robot::RunState()
       //      }
 
 
-      //    case (Neck):
-      //      {
-      //        runNeckState();
-      //        break;
-      //      }
+
       //    case (SpinnyBoi):
       //      {
       //        runSpinnyBoiState();

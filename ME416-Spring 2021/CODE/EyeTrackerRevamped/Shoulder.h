@@ -23,20 +23,20 @@ class Shoulder
     // individual axes stepper objects
   private:
     AccelStepper *xStepper, *yStepper, *zStepper;
-    float stepsPerMM;
+    float stepsPerM;
 
     bool zeroStepperX();
     bool zeroStepperY();
     bool zeroStepperZ();
-    void updateKinematicChain();
+    void updateShoulderPositions();
 
   public:
     Shoulder();
     ~Shoulder();
     void init();
     bool HomeShoulder();
-    void MoveShoulderToPosition(int x, int y, int z);
-    int GetShoulderPosition(char desiredStepper);
+    void MoveShoulderToPosition(float x, float y, float z);
+    float GetShoulderPosition(char desiredStepper);
     void WriteShoulderPositionToProm();
     void ReadShoulderPositionFromProm();
 };

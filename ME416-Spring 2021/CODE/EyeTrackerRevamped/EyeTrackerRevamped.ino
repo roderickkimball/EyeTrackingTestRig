@@ -22,7 +22,7 @@ void setup() {
   Serial.begin(115200); //max value
 
   // Windows API Serial
-  Serial1.begin(38400); // should test 230400
+  Serial1.begin(115200); // should test 230400
 
   // checking for serial connection
   while (!Serial) {
