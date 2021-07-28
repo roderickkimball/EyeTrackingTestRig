@@ -47,6 +47,6 @@ int frontPulse = 42;
 int backRightDir = 44; 
 int backRightPulse = 46; 
 int backLeftDir = 48;  
-int backLeftPulse = 14; //50 on PCB;
+int backLeftPulse = 14; //50 on PCB; but 50 is unusable so connection has been by-passed.
 // Declaring neck servo pins
 int neckServoPin = 12;

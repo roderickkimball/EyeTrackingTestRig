@@ -17,12 +17,12 @@
    objects to control and calibrate the neck.
 */
 enum NeckMotor {
-  front = 1, 
+  front = 1,
   backRight = 2,
   backLeft = 3,
   yawServo = 4,
 };
-extern NeckMotor neckCalibrationMotor; 
+extern NeckMotor neckCalibrationMotor;
 
 // The known cable length after calibration. Equal to calibration stick length.
 extern float knownStepperPos;
@@ -44,14 +44,14 @@ class RobotNeck
 
     Servo neckServo;
     long int neckServoCenter;
-    
+
     // front stepper last recorded position and calibration position
     float lastStepperPosFront, calibrationStepperPosFront;
     // back right stepper last recorded position and calibration position
     float lastStepperPosBackRight, calibrationStepperPosBackRight;
     // back left stepper last recorded position and calibration position
     float lastStepperPosBackLeft, calibrationStepperPosBackLeft;
-    
+
     // length of the spring in the middle of the neck
     float lSpring;
 
@@ -62,6 +62,7 @@ class RobotNeck
     void CalibrateNeck(char neckCalCommand);
     void MoveToCalibratedPosition();
     void MoveNeckManually(float x, float y, float z);
+    void RunSteppers();
     void WriteNeckPositionToProm(char calibrationOrLastPosition);
     void ReadNeckPositionFromProm(char calibrationOrLastPosition);
 

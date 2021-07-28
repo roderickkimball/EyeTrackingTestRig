@@ -10,6 +10,7 @@
 
 #include <BasicLinearAlgebra.h>
 #include "Function.h"
+#include <float.h>
 
 /*
    Kinematic chain class made according to singleton pattern.
@@ -85,6 +86,7 @@ class KinematicChain
     void UpdateNeckTransformationMatrix(float PhiR, float PhiS, float PhiD, float lSpring);
     
     void UpdateKinematicChain();
+    
     BLA::Matrix<4, 4> GetSL();
     BLA::Matrix<4, 4> GetSR();
     BLA::Matrix<4, 4> GetgB1P1();

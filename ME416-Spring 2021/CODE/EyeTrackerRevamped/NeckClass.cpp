@@ -12,8 +12,7 @@ float mmPerStep = mmPerRevs / stepsPerRev;       // mm of thread released in one
 // The known stepper pos after calibration. = (known cable length)/ mmPerStep
 // 0.127 is the length of calibration stick and hence the known cable length.
 float knownStepperPos = 0.127 / mmPerStep;
-// gain for the neck motion
-float motionGain = 0.1;
+
 // number of microseconds per degree for yaw servo
 float yawMicroSecondsPerDegree = 10.00;
 
@@ -47,14 +46,13 @@ void RobotNeck::init()
   this->neckServo.attach(neckServoPin);
 
   this->frontStepper->setMaxSpeed(3000);
-  this->frontStepper->setAcceleration(3000);
+  this->frontStepper->setAcceleration(1500);
 
   this->backLeftStepper->setMaxSpeed(3000);
-  this->backLeftStepper->setAcceleration(3000);
+  this->backLeftStepper->setAcceleration(1500);
 
   this->backRightStepper->setMaxSpeed(3000);
-  this->backRightStepper->setAcceleration(3000);
-  this->backRightStepper->setCurrentPosition(this->lastStepperPosBackRight);
+  this->backRightStepper->setAcceleration(1500);
 
   this->calibrationStepperPosFront = 0.0;
   this->calibrationStepperPosBackRight = 0.0;
@@ -88,17 +86,23 @@ void RobotNeck::CalibrateNeck(char neckCalCommand)
     else if (neckCalibrationMotor == backLeft) neckCalibrationMotor = backRight;
     else if (neckCalibrationMotor == backRight) neckCalibrationMotor = yawServo;
   }
+  else if (neckCalCommand == 'z') {
+    this->frontStepper->setCurrentPosition(knownStepperPos);
+    this->backRightStepper->setCurrentPosition(knownStepperPos);
+    this->backLeftStepper->setCurrentPosition(knownStepperPos);
+  }
+
   //SerialTerminal->println(String(neckCalibrationMotor));
 
   switch (neckCalibrationMotor) {
     case (front): {
         // 'u' will loosen and 'd' will tighten
         if (neckCalCommand == 'u') {
-          this->frontStepper->runToNewPosition(knownStepperPos + 100);
+          this->frontStepper->runToNewPosition(knownStepperPos + 50);
           this->frontStepper->setCurrentPosition(knownStepperPos);
         }
         if (neckCalCommand == 'd') {
-          this->frontStepper->runToNewPosition(knownStepperPos - 100);
+          this->frontStepper->runToNewPosition(knownStepperPos - 50);
           this->frontStepper->setCurrentPosition(knownStepperPos);
         }
         break;
@@ -106,11 +110,11 @@ void RobotNeck::CalibrateNeck(char neckCalCommand)
     case (backRight): {
         // 'u' will loosen and 'd' will tighten
         if (neckCalCommand == 'u') {
-          this->backRightStepper->runToNewPosition(knownStepperPos + 100);
+          this->backRightStepper->runToNewPosition(knownStepperPos + 50);
           this->backRightStepper->setCurrentPosition(knownStepperPos);
         }
         if (neckCalCommand == 'd') {
-          this->backRightStepper->runToNewPosition(knownStepperPos - 100);
+          this->backRightStepper->runToNewPosition(knownStepperPos - 50);
           this->backRightStepper->setCurrentPosition(knownStepperPos);
         }
         break;
@@ -118,27 +122,28 @@ void RobotNeck::CalibrateNeck(char neckCalCommand)
     case (backLeft): {
         // 'u' will loosen and 'd' will tighten
         if (neckCalCommand == 'u') {
-          this->backLeftStepper->runToNewPosition(knownStepperPos + 100);
+          this->backLeftStepper->runToNewPosition(knownStepperPos + 50);
           this->backLeftStepper->setCurrentPosition(knownStepperPos);
         }
         if (neckCalCommand == 'd') {
-          this->backLeftStepper->runToNewPosition(knownStepperPos - 100);
+          this->backLeftStepper->runToNewPosition(knownStepperPos - 50);
           this->backLeftStepper->setCurrentPosition(knownStepperPos);
         }
         break;
       }
     case (yawServo): {
-      // 'u' will twist to right and 'd' will twist to left
-      if (neckCalCommand == 'u') {
-        this->neckServoCenter += 5;
-        this->neckServo.writeMicroseconds(this->neckServoCenter);
+        // 'u' will twist to right and 'd' will twist to left
+        if (neckCalCommand == 'u') {
+          this->neckServoCenter += 5;
+          this->neckServo.writeMicroseconds(this->neckServoCenter);
+        }
+        if (neckCalCommand == 'd') {
+          this->neckServoCenter -= 5;
+          this->neckServo.writeMicroseconds(this->neckServoCenter);
+        }
+        break;
       }
-      if (neckCalCommand == 'd') {
-        this->neckServoCenter -= 5;
-        this->neckServo.writeMicroseconds(this->neckServoCenter);
-      }
-      break;
-    }
+
     default: break;
   }
 }
@@ -147,12 +152,12 @@ void RobotNeck::CalibrateNeck(char neckCalCommand)
    Function to move the neck manually. The function takes in two parameters that determine
    pitch and roll of the neck.
    X and Y should be scaled between -1 and 1.
-   Z should be scaled between 0 and 1. 
+   Z should be scaled between 0 and 1.
 */
 void RobotNeck::MoveNeckManually(float x, float y, float z)
 {
-  float PhiS = atan2(y, x) - M_PI_2;
-  float PhiR = (3.14159/6) * sqrt(sq (y) + sq(x));
+  float PhiS = x;
+  float PhiR = y;
   float PhiD = z * 180;
 
   // obtaining instance of kinematic chain class
@@ -161,24 +166,35 @@ void RobotNeck::MoveNeckManually(float x, float y, float z)
   KinematicChain* tfMatrix = KinematicChain::getInstance();
 
   tfMatrix->UpdateNeckTransformationMatrix(PhiR, PhiS, PhiD, this->lSpring);
-  
+
   BLA::Matrix<4, 4> gB1_P1 = tfMatrix->GetgB1P1();
   BLA::Matrix<4, 4> gB2_P2 = tfMatrix->GetgB2P2();
   BLA::Matrix<4, 4> gB3_P3 = tfMatrix->GetgB3P3();
 
-  float frontCableLength = sqrt(sq(gB1_P1(0,3)) + sq(gB1_P1(1,3)) + sq(gB1_P1(2,3)));
-  float backRightCableLength = sqrt(sq(gB2_P2(0,3)) + sq(gB2_P2(1,3)) + sq(gB2_P2(2,3)));
-  float backLeftCableLength = sqrt(sq(gB3_P3(0,3)) + sq(gB3_P3(1,3)) + sq(gB3_P3(2,3)));
+  float frontCableLength = sqrt(sq(gB1_P1(0, 3)) + sq(gB1_P1(1, 3)) + sq(gB1_P1(2, 3)));
+  float backRightCableLength = sqrt(sq(gB2_P2(0, 3)) + sq(gB2_P2(1, 3)) + sq(gB2_P2(2, 3)));
+  float backLeftCableLength = sqrt(sq(gB3_P3(0, 3)) + sq(gB3_P3(1, 3)) + sq(gB3_P3(2, 3)));
 
-  this->frontStepper->runToNewPosition(frontCableLength / mmPerStep);
-  this->backRightStepper->runToNewPosition(backRightCableLength / mmPerStep);
-  this->backLeftStepper->runToNewPosition(backLeftCableLength / mmPerStep);
+  this->frontStepper->moveTo(frontCableLength / mmPerStep);
+  this->backRightStepper->moveTo(backRightCableLength / mmPerStep);
+  this->backLeftStepper->moveTo(backLeftCableLength / mmPerStep);
 
   this->lastStepperPosFront = this->frontStepper->currentPosition();
   this->lastStepperPosBackRight = this->backRightStepper->currentPosition();
   this->lastStepperPosBackLeft = this->backLeftStepper->currentPosition();
 
   this->neckServo.writeMicroseconds(this->neckServoCenter + PhiD * yawMicroSecondsPerDegree);
+}
+
+/*
+   Function to run the stepper motors to the desired set position.
+   This function must be called everytime the move neck manually function is called.
+*/
+void RobotNeck::RunSteppers()
+{
+  this->frontStepper->run();
+  this->backRightStepper->run();
+  this->backLeftStepper->run();
 }
 
 /*
@@ -223,13 +239,13 @@ void RobotNeck::WriteNeckPositionToProm(char calibrationOrLastPosition)
   }
   EEPROM.put(eeAddress, this->frontStepper->currentPosition());
   eeAddress = (PromAddress)((int)eeAddress + 4);
-  
+
   EEPROM.put(eeAddress, this->backRightStepper->currentPosition());
   eeAddress = (PromAddress)((int)eeAddress + 4);
-  
+
   EEPROM.put(eeAddress, this->backLeftStepper->currentPosition());
   eeAddress = (PromAddress)((int)eeAddress + 4);
-  
+
   EEPROM.put(eeAddress, this->neckServoCenter);
   delay(100);
 
@@ -237,7 +253,7 @@ void RobotNeck::WriteNeckPositionToProm(char calibrationOrLastPosition)
 }
 
 /*
-   Function to read the either the calibration stepper positions
+   Function to read either the calibration stepper positions
    or the last neck stepper positions from the EEPROM. The character input into the function
    determines which variables are read.
 */
@@ -249,19 +265,19 @@ void RobotNeck::ReadNeckPositionFromProm(char calibrationOrLastPosition)
   if (calibrationOrLastPosition == 'c')
   {
     eeAddress = FrontNeckCalibrationStepperPosition;
-    
+
     EEPROM.get(eeAddress, stepperPosition);
     this->calibrationStepperPosFront = stepperPosition;
     eeAddress = (PromAddress)((int)eeAddress + 4);
-    
+
     EEPROM.get(eeAddress, stepperPosition);
     this->calibrationStepperPosBackRight = stepperPosition;
     eeAddress = (PromAddress)((int)eeAddress + 4);
-    
+
     EEPROM.get(eeAddress, stepperPosition);
     this->calibrationStepperPosBackLeft = stepperPosition;
     eeAddress = (PromAddress)((int)eeAddress + 4);
-    
+
     // reading neck servo center location and sending to center.
     EEPROM.get(eeAddress, stepperPosition);
     this->neckServoCenter = stepperPosition;
@@ -274,17 +290,17 @@ void RobotNeck::ReadNeckPositionFromProm(char calibrationOrLastPosition)
     EEPROM.get(eeAddress, stepperPosition);
     this->lastStepperPosFront = stepperPosition;
     this->frontStepper->setCurrentPosition(this->lastStepperPosFront);
-    
+
     eeAddress = (PromAddress)((int)eeAddress + 4);
     EEPROM.get(eeAddress, stepperPosition);
     this->lastStepperPosBackRight = stepperPosition;
     this->backRightStepper->setCurrentPosition(this->lastStepperPosBackRight);
-    
+
     eeAddress = (PromAddress)((int)eeAddress + 4);
     EEPROM.get(eeAddress, stepperPosition);
     this->lastStepperPosBackLeft = stepperPosition;
     this->backLeftStepper->setCurrentPosition(this->lastStepperPosBackLeft);
   }
-  
+
   SerialTerminal->println("Neck variables read!");
 }

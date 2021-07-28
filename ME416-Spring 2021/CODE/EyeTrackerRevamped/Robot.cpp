@@ -192,6 +192,7 @@ void Robot::runNeckCalibrationState()
 /*
    Function to obtain manual control of the neck.
    X and Y positions have to be scaled between -1.0 and 1.0
+   Z value has to be scaled between 0 and 1.
 */
 void Robot::runNeckManualState()
 {
@@ -212,6 +213,7 @@ void Robot::runNeckManualState()
     this->robotNeck.WriteNeckPositionToProm('l');
     this->SetState(static_cast<int>(MenuMode));
   }
+  this->robotNeck.RunSteppers();
 }
 
 /*

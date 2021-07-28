@@ -41,6 +41,8 @@ void Shoulder::init()
   this->zStepper->setMaxSpeed(10000);
   this->zStepper->setAcceleration(2000);
 
+  // this is the number of steps the steppers have to take
+  // to travel 1 meter. Empirically determined.
   this->stepsPerM = 89000;
 }
 
@@ -52,6 +54,7 @@ bool Shoulder::zeroStepperX()
 {
   int limitSwitchState = digitalRead(xEnd);
 
+  // until the limit switch trips keep moving forward
   if (limitSwitchState == HIGH)
   {
     this->xStepper->move(5000);
@@ -122,7 +125,7 @@ void Shoulder::updateShoulderPositions()
   KinematicChain* tfMatrix = KinematicChain::getInstance();
 
   // When shoulders move from their home position, all positions are -ve, so we have to invert this
-  // for the kinematic chain
+  // for the kinematic chain to make them positive
   tfMatrix->SetStepperPositions(-(this->GetShoulderPosition('x')), -(this->GetShoulderPosition('y')), -(this->GetShoulderPosition('z')));
 }
 

@@ -9,6 +9,8 @@ EyeMotor calibrationMotor = rightZ;
    Microseconds increment required for 1 degree motion of the eyes
 */
 float microSecondsPerDegree = 10.20408163;
+float lXmicroSecondsPerDegree = 10.20408163 * 1.012;
+float lZmicroSecondsPerDegree = 10.20408163 * 1.1;
 
 /*
    Eye class constructor.
@@ -19,7 +21,7 @@ Eyes::Eyes()
 
 /*
    Initialization function for eye subsystem. Attaches the servo objects
-   to their respective pins and sets a default value for the center locations.
+   to their respective pins and sets default value for the center locations.
 */
 void Eyes::init()
 {
@@ -28,7 +30,7 @@ void Eyes::init()
   this->xServoR.attach(xRPin);
   this->zServoR.attach(zRPin);
 
-  // 1500 microseconds is the default center for servo objects
+  // 1500 microseconds is the default center for servo objects from class Servo.h
   this->lXCenter = 1500;
   this->lZCenter = 1500;
   this->rXCenter = 1500;
@@ -43,29 +45,29 @@ void Eyes::init()
 }
 
 /*
-   Private helper function parallax to make eye servos look at
-   desired coordinate position.
+   Parallax function to make eye servos look at
+   desired coordinate position. Left and right dot positions indicate the desired
+   position on the screen in the frame of reference of the left and right eyes, that the eyes need to look at.
 */
 void Eyes::parallax(BLA::Matrix<4> leftDotPos, BLA::Matrix<4> rightDotPos)
 {
   // calculating angles of rotation for the left eye
-  float alphaLeft = atan2(leftDotPos(1), leftDotPos(0)) * (180 / 3.14159);
-  float betaLeft = -atan2(leftDotPos(2), sqrt((leftDotPos(0) * leftDotPos(0)) + (leftDotPos(1) * leftDotPos(1)))) * (180 / 3.14159);
+  float alphaLeft = atan2(leftDotPos(1), leftDotPos(0)) * (180 / M_PI);
+  float betaLeft = -atan2(leftDotPos(2), sqrt((leftDotPos(0) * leftDotPos(0)) + (leftDotPos(1) * leftDotPos(1)))) * (180 / M_PI);
 
   // calculating angles of rotation for the right eye
-  float alphaRight  = atan2(rightDotPos(1), rightDotPos(0)) * (180 / 3.14159);
-  float betaRight = atan2(rightDotPos(2), sqrt((rightDotPos(0) * rightDotPos(0)) + (rightDotPos(1) * rightDotPos(1)))) * (180 / 3.14159);
+  float alphaRight  = atan2(rightDotPos(1), rightDotPos(0)) * (180 / M_PI);
+  float betaRight = atan2(rightDotPos(2), sqrt((rightDotPos(0) * rightDotPos(0)) + (rightDotPos(1) * rightDotPos(1)))) * (180 / M_PI);
 
   // writing the angle values to the X and Z servos.
-  this->xServoL.writeMicroseconds(this->lXCenter + (90 - alphaLeft) * microSecondsPerDegree);
+  this->xServoL.writeMicroseconds(this->lXCenter + (90 - alphaLeft) * lXmicroSecondsPerDegree);
   //delay(50);
-  this->zServoL.writeMicroseconds(this->lZCenter + (betaLeft) * microSecondsPerDegree);
+  this->zServoL.writeMicroseconds(this->lZCenter + (betaLeft) * lZmicroSecondsPerDegree);
   //delay(50);
   this->xServoR.writeMicroseconds(this->rXCenter + (90 - alphaRight) * microSecondsPerDegree);
   //delay(50);
   this->zServoR.writeMicroseconds(this->rZCenter + (betaRight) * microSecondsPerDegree);
   delay(50);
-  //SerialTerminal->println("moving");
 }
 
 /*
@@ -77,6 +79,8 @@ void Eyes::WriteEyeCalibrationVariablesToProm()
   PromAddress eeAddress = LXCenter;
 
   EEPROM.put(eeAddress, this->lXCenter);
+  // incrementing the address variable by 4 because 
+  // it is the size of a floating point data type
   eeAddress = (PromAddress)((int)eeAddress + 4);
   EEPROM.put(eeAddress, this->lZCenter);
   eeAddress = (PromAddress)((int)eeAddress + 4);
@@ -125,7 +129,6 @@ void Eyes::CalibrateEyes(char eyeCalCommand)
   // set to zero for calibration to calibrate to center of screen.
   BLA::Matrix<4> screenDotPos = {0, 0, 0, 1};
 
-  //SerialTerminal->println(eyeCalCommand);
   // Eye motor determination
   if (eyeCalCommand == 'r') {
     if (calibrationMotor == leftX) calibrationMotor = rightX;
@@ -144,37 +147,37 @@ void Eyes::CalibrateEyes(char eyeCalCommand)
   {
     case (rightZ) : {
         if (eyeCalCommand == 'u') {
-          this->rZCenter += 5;
+          this->rZCenter += 1;
         }
         if (eyeCalCommand == 'd') {
-          this->rZCenter -= 5;
+          this->rZCenter -= 1;
         }
         break;
       }
     case (leftZ) : {
         if (eyeCalCommand == 'u') {
-          this->lZCenter += 5;
+          this->lZCenter += 1;
         }
         if (eyeCalCommand == 'd') {
-          this->lZCenter -= 5;
+          this->lZCenter -= 1;
         }
         break;
       }
     case (rightX) : {
         if (eyeCalCommand == 'u') {
-          this->rXCenter += 5;
+          this->rXCenter += 1;
         }
         if (eyeCalCommand == 'd') {
-          this->rXCenter -= 5;
+          this->rXCenter -= 1;
         }
         break;
       }
     case (leftX) : {
         if (eyeCalCommand == 'u') {
-          this->lXCenter += 5;
+          this->lXCenter += 1;
         }
         if (eyeCalCommand == 'd') {
-          this->lXCenter -= 5;
+          this->lXCenter -= 1;
         }
         break;
       }

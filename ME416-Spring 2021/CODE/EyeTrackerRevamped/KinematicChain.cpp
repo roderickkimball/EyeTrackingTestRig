@@ -12,7 +12,7 @@ KinematicChain::KinematicChain()
   // should be replaced with actual coordinates from gantry to center of servo
   this->gCY = xform(0, 0, 0, 0, (0.0956), (0.0129));
   // should be replaced with actual coordinates from gantry to base of neck
-  this->gYN = xform(0, 0, 0, 0, (-0.0001), (0.0672));
+  this->gYN = xform(0, 0, 0, 0, 0, (0.0672));
   // should be replaced with actual coordinates from base of neck to middle of eyes
   this->gNT = xform(0, 0, 0, 0, 0, 0);
   this->gTD = xform(0, 0, 0, (-0.004), (0.0636), (0.0856));
@@ -21,33 +21,33 @@ KinematicChain::KinematicChain()
 
   // declaring the constant transformation matrices for the neck
   // these transformation matrices will not get updated throughout the program.
-  this->gO_B1 = {1.0, 0.0, 0.0, 0.06 * cos(0 * 2 * 3.14159 / 3),
-                 0.0, 1.0, 0.0, 0.06 * sin(0 * 2 * 3.14159 / 3),
+  this->gO_B1 = {1.0, 0.0, 0.0, 0.06 * cos(0 * 2 * M_PI / 3),
+                 0.0, 1.0, 0.0, 0.06 * sin(0 * 2 * M_PI / 3),
                  0.0, 0.0, 1.0, 0.0,
                  0.0, 0.0, 0.0, 1.0
                 };
-  this->gO_B2 = {1.0, 0.0, 0.0, 0.06 * cos(2 * 3.14159 / 3),
-                 0.0, 1.0, 0.0, 0.06 * sin(2 * 3.14159 / 3),
+  this->gO_B2 = {1.0, 0.0, 0.0, 0.06 * cos(2 * M_PI / 3),
+                 0.0, 1.0, 0.0, 0.06 * sin(2 * M_PI / 3),
                  0.0, 0.0, 1.0, 0.0,
                  0.0, 0.0, 0.0, 1.0
                 };
-  this->gO_B3 = {1.0, 0.0, 0.0, 0.06 * cos(2 * 2 * 3.14159 / 3),
-                 0.0, 1.0, 0.0, 0.06 * sin(2 * 2 * 3.14159 / 3),
+  this->gO_B3 = {1.0, 0.0, 0.0, 0.06 * cos(2 * 2 * M_PI / 3),
+                 0.0, 1.0, 0.0, 0.06 * sin(2 * 2 * M_PI / 3),
                  0.0, 0.0, 1.0, 0.0,
                  0.0, 0.0, 0.0, 1.0
                 };
-  this->gPC_P1 = {1.0, 0.0, 0.0, 0.06 * cos(0 * 2 * 3.14159 / 3),
-                  0.0, 1.0, 0.0, 0.06 * sin(0 * 2 * 3.14159 / 3),
+  this->gPC_P1 = {1.0, 0.0, 0.0, 0.06 * cos(0 * 2 * M_PI / 3),
+                  0.0, 1.0, 0.0, 0.06 * sin(0 * 2 * M_PI / 3),
                   0.0, 0.0, 1.0, 0.0,
                   0.0, 0.0, 0.0, 1.0
                  };
-  this->gPC_P2 = {1.0, 0.0, 0.0, 0.06 * cos(2 * 3.14159 / 3),
-                  0.0, 1.0, 0.0, 0.06 * sin(2 * 3.14159 / 3),
+  this->gPC_P2 = {1.0, 0.0, 0.0, 0.06 * cos(2 * M_PI / 3),
+                  0.0, 1.0, 0.0, 0.06 * sin(2 * M_PI / 3),
                   0.0, 0.0, 1.0, 0.0,
                   0.0, 0.0, 0.0, 1.0
                  };
-  this->gPC_P3 = {1.0, 0.0, 0.0, 0.06 * cos(2 * 2 * 3.14159 / 3),
-                  0.0, 1.0, 0.0, 0.06 * sin(2 * 2 * 3.14159 / 3),
+  this->gPC_P3 = {1.0, 0.0, 0.0, 0.06 * cos(2 * 2 * M_PI / 3),
+                  0.0, 1.0, 0.0, 0.06 * sin(2 * 2 * M_PI / 3),
                   0.0, 0.0, 1.0, 0.0,
                   0.0, 0.0, 0.0, 1.0
                  };
@@ -166,30 +166,48 @@ BLA::Matrix<4, 4> KinematicChain::expmXI(BLA::Matrix<6> xI)
   float theta = norm(w_noNorm);
   BLA::Matrix<6> xINorm = xI;
 
-  if (theta != 0)
+  if (abs(theta) > 10*FLT_MIN)
   {
     xINorm = xI / theta;
+    
+    BLA::Matrix<3> v = {xINorm(0), xINorm(1), xINorm(2)};
+    BLA::Matrix<3> w = {xINorm(3), xINorm(4), xINorm(5)};
+
+    BLA::Matrix<3, 3> R = rodrigues(w * theta);
+
+    BLA::Matrix<3, 3> I = eye();
+
+    BLA::Matrix<3, 3> outProduct = OuterProduct(w);
+    BLA::Matrix<3> crossProduct = CrossProduct(w, v);
+
+    BLA::Matrix<3> T = ((I - R) * crossProduct) + (outProduct * v * theta);
+
+    BLA::Matrix<4, 4> g = {R(0, 0), R(0, 1), R(0, 2), T(0),
+                           R(1, 0), R(1, 1), R(1, 2), T(1),
+                           R(2, 0), R(2, 1), R(2, 2), T(2),
+                           0,      0,      0,       1
+                          };
+    SerialTerminal->println("Translation and Rotation");
+    return g;
   }
+  else {
+    BLA::Matrix<3, 3> R = eye();
+    
+    BLA::Matrix<3> v = {xI(0), xI(1), xI(2)};
+    BLA::Matrix<3> w = {xI(3), xI(4), xI(5)};
 
-  BLA::Matrix<3> v = {xINorm(0), xINorm(1), xINorm(2)};
-  BLA::Matrix<3> w = {xINorm(3), xINorm(4), xINorm(5)};
+    BLA::Matrix<3> T = (v);
 
-  BLA::Matrix<3, 3> R = rodrigues(w * theta);
-
-  BLA::Matrix<3, 3> I = eye();
-
-  BLA::Matrix<3, 3> outProduct = OuterProduct(w);
-  BLA::Matrix<3> crossProduct = CrossProduct(w, v);
-
-  BLA::Matrix<3> T = ((I - R) * crossProduct) + (outProduct * v * theta);
-
-  BLA::Matrix<4, 4> g = {R(0, 0), R(0, 1), R(0, 2), T(0),
-                         R(1, 0), R(1, 1), R(1, 2), T(1),
-                         R(2, 0), R(2, 1), R(2, 2), T(2),
-                         0,      0,      0,       1
-                        };
-
-  return g;
+    
+    
+    BLA::Matrix<4, 4> g = {R(0, 0), R(0, 1), R(0, 2), T(0),
+                           R(1, 0), R(1, 1), R(1, 2), T(1),
+                           R(2, 0), R(2, 1), R(2, 2), T(2),
+                           0,      0,      0,       1
+                          };
+    SerialTerminal->println("Translation only");
+    return g;
+  }
 }
 
 /*
@@ -228,6 +246,11 @@ KinematicChain* KinematicChain::getInstance()
 */
 void KinematicChain::SetStepperPositions(float x, float y, float z)
 {
+  /*
+      y is negative here because in all frames of reference
+      forward is positive y. since the stepper always move back
+      from zero position, we invert the sign of y.
+  */
   this->gBC = xform(0, 0, 0, x, -y, z);
 }
 
@@ -247,7 +270,13 @@ void KinematicChain::UpdateNeckTransformationMatrix(float PhiR, float PhiS, floa
   BLA::Matrix<4, 4> g02 = expmXI(xI12 * lSpring);
   BLA::Matrix<4, 4> g03 = expmXI(xI23 * (-PhiS));
 
+  this->PrintG(g01);
+  this->PrintG(g02);
+  this->PrintG(g03);
+
   this->gYN = expmXI(xI01 * PhiD);
+  this->gYN(3, 2) = (0.0672);
+  // need to assign the distances once again.
   this->gNT = g01 * g02 * g03;
 
   this->gB1_P1 = this->gO_B1.Inverse() * this->gNT * this->gPC_P1;
@@ -270,6 +299,7 @@ void KinematicChain::UpdateKinematicChain()
   SerialTerminal->println(" ");
   this->PrintG(this->gNT);
   SerialTerminal->println(" ");
+  this->PrintG(this->gYN);
   this->PrintG(this->gSL);
   SerialTerminal->println(" ");
   this->PrintG(this->gSR);
@@ -321,14 +351,14 @@ BLA::Matrix<4, 4> KinematicChain::GetgB3P3()
    Function to print a 4x4 BLA matrix passed in
    as argument.
 */
-void KinematicChain::PrintG(BLA::Matrix<4,4> g)
+void KinematicChain::PrintG(BLA::Matrix<4, 4> g)
 {
   for (int i = 0; i < 4; i++)
   {
     for (int j = 0; j < 4; j++)
     {
-      float x = g(i,j);
-      SerialTerminal->print(x,6);
+      float x = g(i, j);
+      SerialTerminal->print(x, 6);
       SerialTerminal->print("     ");
     }
     SerialTerminal->println(" ");
