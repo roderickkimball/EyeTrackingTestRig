@@ -73,6 +73,7 @@ The Neck class header file includes all the enumerations, variables and the Robo
 		void WriteNeckPositionToProm(): Writes the last stepper position variables for each stepper object to the predetermined address in the EEPROM (refer PromAddress enumeration in Function.h).
 
 		void ReadNeckPositionFromProm(): Reads the last stepper position variables from the EEPROM and sets the current positions for all stepper objects as their corresponding last stepper position variable. 
+		
 SHOULDER.h
 
 •	Shoulder Class: Class encapsulates the stepper objects that makes up the shoulder of the robot, along with the functionalities necessary to home and move the shoulder to the desired position.
