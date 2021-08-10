@@ -28,14 +28,6 @@ enum EyeMotor {
 extern EyeMotor calibrationMotor;
 
 /*
-   this variable denotes the number of steps required to
-   move the eyes 1 degree on the screen. Empirically determined.
-*/
-extern float microSecondsPerDegree;
-extern float lXmicroSecondsPerDegree;
-extern float lZmicroSecondsPerDegree;
-
-/*
    Eye class declaration consisting of private and public member functions.
    Private - Servo objects, calibration motor and center locations
    Public functions - initialization function, calibration function and parallaxing function for eyes.
@@ -50,6 +42,9 @@ class Eyes
     Servo zServoR;
     // center locations in microseconds for the servo objects.
     long int lXCenter, lZCenter, rXCenter, rZCenter;
+    // variable denoting the number of steps required to move the eyes 1 degree on the screen.
+    // (Empirically determined)
+    float lXmicroSecondsPerDegree, lZmicroSecondsPerDegree, rXmicroSecondsPerDegree, rZmicroSecondsPerDegree;
     // this function makes the eyes parallax or look at a single point on the screen
     void parallax(BLA::Matrix<4> leftDotPos, BLA::Matrix<4> rightDotPos);
 
@@ -59,12 +54,12 @@ class Eyes
     //initializer
     void init();
     //calibration function
-    void CalibrateEyes(char eyeCalCommand);
-    // functions to read and write variables to EEPROM
+    void CalibrateEyes(char eyeCalCommand, KinematicChain* tfMatrix);
+    // functions to write and read variables to/from EEPROM
     void WriteEyeCalibrationVariablesToProm();
     void ReadEyeCalibrationVariablesFromProm();
     // public function called by external objects to parallax eyes
-    void ParallaxEyesToPos(BLA::Matrix<4> screenDotPos);
+    void ParallaxEyesToPos(BLA::Matrix<4> screenDotPos, KinematicChain* tfMatrix);
 };
 
 #endif

@@ -22,17 +22,10 @@
 // state machine enumeration.
 enum StateMachineState {
   MenuMode = 0,
-  ServoCalibration = 1,
-  Auto = 2,
-  StepperHome = 3,
-  StepperManual = 4,
-  FindCoordinates = 5,
-  SetCoordinates = 6,
-  ServoManual = 7,
-  NeckCalibration = 8,
-  MoveToCalibrationState = 9,
-  Neck = 10,
-  SpinnyBoi = 11,
+  RobotRun = 1,
+  EyeCalibrate = 2,
+  NeckCalibrate = 3,
+  ShoulderCalibrate = 4,
 };
 
 // EEPROM address enumeration.
@@ -44,13 +37,10 @@ enum PromAddress {
   XStepperPosition = 0,
   YStepperPosition = 4,
   ZStepperPosition = 8,
-  FrontNeckLastStepperPosition = 28,
-  BackRightNeckLastStepperPosition = 32,
-  BackLeftNeckLastStepperPosition = 36,
-  FrontNeckCalibrationStepperPosition = 40,
-  BackRightNeckCalibrationStepperPosition = 44,
-  BackLeftNeckCalibrationStepperPosition = 48,
-  YawServoCalibrationCenter = 52,
+  LastPhiR = 28,
+  LastPhiS = 32,
+  LastPhiD = 36,
+  YawServoCalibrationCenter = 40,
 };
 
 // declaring global variables as extern. They are declared

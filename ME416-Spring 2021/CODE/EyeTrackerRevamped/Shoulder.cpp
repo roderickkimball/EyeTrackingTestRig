@@ -114,18 +114,10 @@ bool Shoulder::zeroStepperZ()
 }
 
 /*
-  Private helper function to update the current position of the
-  stepper axes in the kinematic chain instance.
+   Function to update the shoulder positions in the kinematic chain.
 */
-void Shoulder::updateShoulderPositions()
+void Shoulder::UpdateShoulderPosition(KinematicChain* tfMatrix)
 {
-  // obtaining instance of kinematic chain class
-  // this instance will then help determine the coordinate values
-  // for left and right eyes.
-  KinematicChain* tfMatrix = KinematicChain::getInstance();
-
-  // When shoulders move from their home position, all positions are -ve, so we have to invert this
-  // for the kinematic chain to make them positive
   tfMatrix->SetStepperPositions(-(this->GetShoulderPosition('x')), -(this->GetShoulderPosition('y')), -(this->GetShoulderPosition('z')));
 }
 
@@ -155,7 +147,6 @@ bool Shoulder::HomeShoulder()
   if (xCal == true && yCal == true && zCal == true)
   {
     calibrating = false;
-    this->updateShoulderPositions();
     return calibrating;
   }
   return calibrating;
@@ -170,8 +161,6 @@ void Shoulder::MoveShoulderToPosition(float x, float y, float z)
   this->xStepper->runToNewPosition(x * this->stepsPerM);
   this->yStepper->runToNewPosition(y * this->stepsPerM);
   this->zStepper->runToNewPosition(z * this->stepsPerM);
-
-  this->updateShoulderPositions();
 
   //SerialTerminal->println(this->xStepper->currentPosition());
 }
@@ -209,7 +198,7 @@ void Shoulder::WriteShoulderPositionToProm()
 
   EEPROM.put(eeAddress, this->zStepper->currentPosition());
 
-  SerialTerminal->println("Shoulder position written to Prom");
+  //SerialTerminal->println("Shoulder position written to Prom");
 }
 
 /*
@@ -225,7 +214,7 @@ void Shoulder::ReadShoulderPositionFromProm()
   this->xStepper->setCurrentPosition(stepperPosition);
   eeAddress = (PromAddress)((int)eeAddress + 4);
 
-  SerialTerminal->println(stepperPosition);
+  //SerialTerminal->println(stepperPosition);
 
   EEPROM.get(eeAddress, stepperPosition);
   this->yStepper->setCurrentPosition(stepperPosition);
@@ -234,7 +223,5 @@ void Shoulder::ReadShoulderPositionFromProm()
   EEPROM.get(eeAddress, stepperPosition);
   this->zStepper->setCurrentPosition(stepperPosition);
 
-  SerialTerminal->println("Shoulder positions read from Prom");
-
-  this->updateShoulderPositions();
+  //SerialTerminal->println("Shoulder positions read from Prom");
 }

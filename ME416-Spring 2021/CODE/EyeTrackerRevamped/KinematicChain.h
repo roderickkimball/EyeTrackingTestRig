@@ -24,11 +24,6 @@ class KinematicChain
        be created outside the class and a pointer to the instance of the class.
     */
   private:
-    static KinematicChain* instance_;
-    KinematicChain();
-    KinematicChain(const KinematicChain&) {};
-    KinematicChain& operator=(const KinematicChain&) {};
-
     /*
        Private helper function to manipulate and create the transformation matrices
        to be used.
@@ -78,8 +73,12 @@ class KinematicChain
        Public member functions consist of getter for the instance of class,
        and additional functions to recalculate and update the transformation matrices.
     */
-  public:
-    static KinematicChain* getInstance();
+  public:    
+    KinematicChain();
+    KinematicChain(const KinematicChain&) {};
+    KinematicChain& operator=(const KinematicChain&) {};
+
+    void init();
 
     void SetStepperPositions(float x, float y, float z);
     

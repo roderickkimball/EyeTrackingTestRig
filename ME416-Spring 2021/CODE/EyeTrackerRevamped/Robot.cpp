@@ -15,6 +15,10 @@ Robot::Robot()
   SerialTerminal->println("Created Robot Object");
 }
 
+Robot::~Robot()
+{
+}
+
 /*
    Initialization function for the robot class that
    will create the robot eye, shoulder and neck objects.
@@ -24,17 +28,19 @@ void Robot::init()
   this->robotEyes.init();
   this->robotShoulder.init();
   this->robotNeck.init();
+  this->tfMatrix.init();
 
   this->robotEyes.ReadEyeCalibrationVariablesFromProm();
 
+  // reading the last shoulder position from prom and updating the kinematic chain
   this->robotShoulder.ReadShoulderPositionFromProm();
+  this->robotShoulder.UpdateShoulderPosition(&this->tfMatrix);
 
-  this->robotNeck.ReadNeckPositionFromProm('c');
-  this->robotNeck.ReadNeckPositionFromProm('l');
+  // reading the last neck position from prom and updating the kinematic chain
+  this->robotNeck.ReadNeckPositionFromProm();
+  this->robotNeck.SetLastNeckPosition(&this->tfMatrix);
 
   this->updateKinematicChain();
-
-  SerialTerminal->println("Finished ROBOT init");
 }
 
 /*
@@ -57,17 +63,13 @@ char Robot::getSerialCommand()
 */
 void Robot::updateKinematicChain()
 {
-  // obtaining instance of kinematic chain class
-  // this instance will then help determine the coordinate values
-  // for left and right eyes.
-  KinematicChain* tfMatrix = KinematicChain::getInstance();
-
-  tfMatrix->UpdateKinematicChain();
+  this->tfMatrix.UpdateKinematicChain();
 }
 
 /*
    Function to obtain serial communication signals from Windows API.
-   Based on the predefined code established here, functionality is chosen.
+   Resembles the idle state of the machine. s command is sent to change the state
+   to achieve the desired functionality.
 */
 void Robot::runMenuModeState()
 {
@@ -77,47 +79,131 @@ void Robot::runMenuModeState()
     SerialTerminal->println("Mode: " + stateNames[this->GetState()]);
   }
 
-  else if (command == 's') { //changes state
-    int newstate = SerialTerminal->parseInt();
-    this->SetState(newstate);
-    SerialTerminal->println("tring to go to state: " + stateNames[newstate]);
+  else if (command == 's') {
+    int stateNumber = SerialTerminal->parseInt();
+    this->SetState(stateNumber);
   }
+}
+
+/*
+   Function to move the desired subsystem to their desired positions.
+   This function is called immediately after the g code is sent from the API or serial communication.
+*/
+void Robot::setRobotPosition(char command)
+{
+  switch (command) {
+    case ('e'): {
+        float goX = SerialTerminal->parseFloat();
+        float goY = SerialTerminal->parseFloat();
+        this->screenDotPos(0) = goX;
+        this->screenDotPos(2) = goY;
+
+        break;
+      }
+    case ('s'): {
+        float goX = SerialTerminal->parseFloat();
+        float goY = SerialTerminal->parseFloat();
+        float goZ = SerialTerminal->parseFloat();
+
+        this->robotShoulder.MoveShoulderToPosition(-goX, -goY, -goZ);
+
+        this->robotShoulder.UpdateShoulderPosition(&this->tfMatrix);
+        break;
+      }
+    case ('n'): {
+        float phiR = SerialTerminal->parseFloat();
+        float phiS = SerialTerminal->parseFloat();
+        float phiD = SerialTerminal->parseFloat();
+
+        this->robotNeck.MoveNeckManually(phiR, phiS, phiD, &this->tfMatrix);        
+        break;
+      }
+    default: break;
+  }
+  this->updateKinematicChain();
+}
+
+/*
+   Function to get the current position of the desired subsystem. This function is called
+   immediately after the p command is sent from the API or serial communication.
+*/
+void Robot::getRobotPosition(char command)
+{
+  switch (command) {
+    case ('e'): {
+        SerialTerminal->print(this->screenDotPos(0));
+        SerialTerminal->print(", ");
+        SerialTerminal->println(this->screenDotPos(2));
+
+        break;
+      }
+    case ('s'): {
+        SerialTerminal->print(this->robotShoulder.GetShoulderPosition('x'));
+        SerialTerminal->print(", ");
+        SerialTerminal->print(this->robotShoulder.GetShoulderPosition('y'));
+        SerialTerminal->print(", ");
+        SerialTerminal->println(this->robotShoulder.GetShoulderPosition('z'));
+
+        break;
+      }
+    case ('n'): {
+        SerialTerminal->println("NotImplementedYet");
+        break;
+      }
+    default: break;
+  }
+}
+
+/*
+   Function that executes the RunRobot state. This function can be used to set the positions
+   of the desired subsystem of the robot i.e. obtain manual control of the desired subsystem
+   and can also be used to get the positions of the desired subsystem.
+*/
+void Robot::runRobotRunState()
+{
+  char command = this->getSerialCommand();
+
+  if (command == 'g') {
+    char newCommand[1];
+    SerialTerminal->readBytes(newCommand, 1);
+
+    this->setRobotPosition(newCommand[0]);
+  }
+
+  else if (command == 'p') {
+    char newCommand[1];
+    SerialTerminal->readBytes(newCommand, 1);
+
+    this->getRobotPosition(newCommand[0]);
+  }
+
+  else if (command == 'm') {
+    this->robotShoulder.WriteShoulderPositionToProm();
+
+    this->robotNeck.WriteNeckPositionToProm();
+
+    this->SetState(static_cast<int>(MenuMode));
+  }
+
+  this->robotNeck.RunSteppers();
+  this->robotEyes.ParallaxEyesToPos(this->screenDotPos, &this->tfMatrix);
 }
 
 /*
    Function to obtain calibration commands from API and
    subsequently pass message onto Eye subsystem class.
 */
-void Robot::runServoCalibrationState()
+void Robot::runEyeCalibrationState()
 {
   char eyeCalCommand = this->getSerialCommand();
 
   // calling robotEyes object to perform calibration of eyes.
-  this->robotEyes.CalibrateEyes(eyeCalCommand);
+  this->robotEyes.CalibrateEyes(eyeCalCommand, &this->tfMatrix);
+
   // if calibration has been stopped, return to MenuMode;
-  if (eyeCalCommand == 'b')
+  if (eyeCalCommand == 'm')
   {
     this->robotEyes.WriteEyeCalibrationVariablesToProm();
-    this->SetState(static_cast<int>(MenuMode));
-  }
-}
-
-/*
-   Function to enable manual control of the eye subsystem
-*/
-void Robot::runServoManualState()
-{
-  char command = this->getSerialCommand();
-
-  if (command == 'g') {
-    float goX = SerialTerminal->parseFloat();
-    float goZ = SerialTerminal->parseFloat();
-    this->screenDotPos(0) = goX;
-    this->screenDotPos(2) = goZ;
-
-    this->robotEyes.ParallaxEyesToPos(this->screenDotPos);
-  }
-  else if (command == 'b') {
     this->SetState(static_cast<int>(MenuMode));
   }
 }
@@ -127,40 +213,18 @@ void Robot::runServoManualState()
    steppers till they hit the limit switches. Hitting the limit switches will reset the zero locations
    of the steppers.
 */
-void Robot::runShoulderHomeState()
+void Robot::runShoulderCalibrationState()
 {
   // Home all steppers function will return false when steppers have finished homing
   bool calibrating = this->robotShoulder.HomeShoulder();
 
+  this->robotShoulder.UpdateShoulderPosition(&this->tfMatrix);
+
   char command = this->getSerialCommand();
 
 
-  if (command == 'b' || calibrating == false)
+  if (command == 'm' || calibrating == false)
   {
-    this->updateKinematicChain();
-    this->robotShoulder.WriteShoulderPositionToProm();
-    this->SetState(static_cast<int>(MenuMode));
-  }
-}
-
-/*
-   Shoulder Manual state will allow the user to obtain manual control of the shoulder
-   steppers.
-*/
-void Robot::runShoulderManualState()
-{
-  char command = this->getSerialCommand();
-
-  if (command == 'g') {
-    float goX = SerialTerminal->parseFloat();
-    float goY = SerialTerminal->parseFloat();
-    float goZ = SerialTerminal->parseFloat();
-
-    // When shoulders move from their home position, all positions are -ve, so we have to invert the values
-    // so the input from API can be positive.
-    this->robotShoulder.MoveShoulderToPosition(-goX, -goY, -goZ);
-  }
-  else if (command == 'b') {
     this->updateKinematicChain();
     this->robotShoulder.WriteShoulderPositionToProm();
     this->SetState(static_cast<int>(MenuMode));
@@ -177,43 +241,16 @@ void Robot::runNeckCalibrationState()
 
   // calling robotEyes object to perform calibration of eyes.
   this->robotNeck.CalibrateNeck(neckCalCommand);
+
   // if calibration has been stopped, return to MenuMode;
-  if (neckCalCommand == 'b')
+  if (neckCalCommand == 'm')
   {
     this->updateKinematicChain();
-    // writing calibration variables to prom
-    this->robotNeck.WriteNeckPositionToProm('c');
+
     // writing last neck position variables to prom
-    this->robotNeck.WriteNeckPositionToProm('l');
+    this->robotNeck.WriteNeckPositionToProm();
     this->SetState(static_cast<int>(MenuMode));
   }
-}
-
-/*
-   Function to obtain manual control of the neck.
-   X and Y positions have to be scaled between -1.0 and 1.0
-   Z value has to be scaled between 0 and 1.
-*/
-void Robot::runNeckManualState()
-{
-  char command = this->getSerialCommand();
-
-  if (command == 'g')
-  {
-    float goX = SerialTerminal->parseFloat();
-    float goY = SerialTerminal->parseFloat();
-    float goZ = SerialTerminal->parseFloat();
-
-    this->robotNeck.MoveNeckManually(goX, goY, goZ);
-  }
-
-  else if (command == 'b')
-  {    
-    this->updateKinematicChain();
-    this->robotNeck.WriteNeckPositionToProm('l');
-    this->SetState(static_cast<int>(MenuMode));
-  }
-  this->robotNeck.RunSteppers();
 }
 
 /*
@@ -222,7 +259,7 @@ void Robot::runNeckManualState()
 void Robot::SetState(int stateNumber)
 {
   this->robotState = static_cast<StateMachineState>(stateNumber);
-  SerialTerminal->println("Set New State");
+  //SerialTerminal->println("Set New State");
 }
 
 /*
@@ -231,7 +268,7 @@ void Robot::SetState(int stateNumber)
 int Robot::GetState()
 {
   return static_cast<int>(this->robotState);
-  SerialTerminal->println("Current State is " + String(this->robotState));
+  //SerialTerminal->println("Current State is " + String(this->robotState));
 }
 
 /*
@@ -247,71 +284,29 @@ void Robot::RunState()
         (this)->runMenuModeState();
         break;
       }
-    case (ServoCalibration):
+    case (EyeCalibrate):
       {
-        (this)->runServoCalibrationState();
+        (this)->runEyeCalibrationState();
         break;
       }
-    case (ServoManual):
+    case (ShoulderCalibrate):
       {
-        (this)->runServoManualState();
+        (this)->runShoulderCalibrationState();
         break;
       }
-    case (StepperHome):
-      {
-        (this)->runShoulderHomeState();
-        break;
-      }
-    case (StepperManual):
-      {
-        (this)->runShoulderManualState();
-        break;
-      }
-    case (NeckCalibration):
+    case (NeckCalibrate):
       {
         (this)->runNeckCalibrationState();
         break;
       }
-    case (MoveToCalibrationState):
+    case (RobotRun):
       {
-        (this)->robotNeck.MoveToCalibratedPosition();
-        this->updateKinematicChain();
-        this->SetState(static_cast<int>(MenuMode));
-        break;
-      }
-    case (Neck):
-      {
-        (this)->runNeckManualState();
+        (this)->runRobotRunState();
         break;
       }
     default :
       {
         break;
       }
-
-      //    case (SetCoordinates):
-      //      {
-      //        runSetCoordinatesState();
-      //        break;
-      //      }
-      //    case (FindCoordinates):
-      //      {
-      //        runFindCoordinatesState();
-      //        break;
-      //      }
-      //    case (Auto):
-      //      {
-      //        runAutoState();
-      //        break;
-      //      }
-
-
-
-      //    case (SpinnyBoi):
-      //      {
-      //        runSpinnyBoiState();
-      //        break;
-      //      }
   }
-
 }

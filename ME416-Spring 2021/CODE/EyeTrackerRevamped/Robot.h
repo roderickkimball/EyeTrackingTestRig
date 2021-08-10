@@ -27,23 +27,28 @@ class Robot
     Eyes robotEyes;
     Shoulder robotShoulder;
     RobotNeck robotNeck;
+    KinematicChain tfMatrix; 
+    
     BLA::Matrix<4> screenDotPos;
 
     char getSerialCommand();
 
     void updateKinematicChain();
 
+    void setRobotPosition(char command);
+    void getRobotPosition(char command);
+
     void runMenuModeState();
-    void runServoCalibrationState();
-    void runServoManualState();
-    void runShoulderHomeState();
-    void runShoulderManualState();
+    void runRobotRunState();
+    
+    void runEyeCalibrationState();
+    void runShoulderCalibrationState();
     void runNeckCalibrationState();
-    void runNeckManualState();
 
 
   public:
     Robot();
+    ~Robot();
     void init();
     void SetState(int stateNumber);
     int GetState();

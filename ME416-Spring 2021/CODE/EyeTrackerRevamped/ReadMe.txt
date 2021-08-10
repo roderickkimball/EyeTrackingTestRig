@@ -1,3 +1,50 @@
+ROBOT.h
+
+•	Robot Class: Class encapsulates the entire eye tracker robot, including the eye, neck and shoulder objects, along with members indicating the current state of the robot, and public member functions to
+		run the different states of the robot and interface with the API. 
+
+	Private Members: 
+		robotState (StateMachineState): Enumeration object that stores the current state of the robot (refer StateMachineState enumeration in Function.h).
+		robotEyes (Eyes object): Eyes class object encapsulating the eye subsystem.
+		robotNeck (NeckClass object): NeckClass object that encapsulates the neck subsystem.
+		robotShoulder (Shoulder object): Shoulder object that encapsulates the shoulder subsystem.
+		screenDotPos (Matrix(4)): Matrix that denotes the coordinates of the desired gaze position for the eyes.
+
+	Private Member Functions:
+
+		char getSerialCommand(): Obtains a single character command from the Hardware Serial or the connection to the API by performing Serial.read().
+			Returns the passed in character from the serial port. 
+
+		void updateKinematicChain(): Updates the kinematic chain instance. References the UpdateKinematicChain() function in KinematicChain.h that recalculates the entire kinematic chain going
+			from the eyes to the screen.
+
+		void runMenuModeState(): Runs the MenuMode state, that essentially waits for a user input from the Serial terminal to change the state to a desired one. 
+			References getSerialCommand(). If the command is m, then it prints the current state. If the command is s-(int), it changes the state to the enumerated integer passed in.
+
+		void runServoCalibrationState(): References getSerialCommand() and passes the obtained character into the CalibrateEyes(char) function in EyeSubsystem.h.
+
+		void runServoManualState(): References getSerialCommand() and if the obtained character is g, it parses for a (float,float), loads these values into screenDotPos, and then passes these coordinates into ParallaxEyesToPos(screenDotPosition) function in EyeSubsystem.h.
+
+		void runShoulderHomeState(): References the HomeShoulder() function in the Shoulder class. If a 'b' is encountered during the homing process, the robot is set back to MenuMode.
+
+		void runShoulderManualState(): References getSerialCommand() and if the obtained character is g, it parses for a (float,float,float) and passes these values into the MoveShoulderToPosition(x,y,z) function in Shoulder.h.
+
+		void runNeckCalibrationState(): References getSerialCommand() and passes the obtained character into the CalibrateNeck(char) function in NeckClass.h.
+
+		void runNeckManualState(): References getSerialCommand() and if the obtained character is g, it parses for a (float,float,float) and passes these rotation values into the MoveNeckManually(PhiS,PhiR,Yaw) function in Neck.h.
+			References RunSteppers() function in NeckClass.h to move the steppers to the set target position.
+
+	Public Member Functions:
+
+		void init(): Initialization function for the robot class object. Initializes the eyes, neck and shoulder objects encapsulated. Calls the read-from-EEPROM function in each of the class objects. Calls the updateKinematicChain() function
+			to load all of the variable updates into the kinematic chain instance. 
+
+		void SetState(int stateNumber): Sets the state of the robot to the enumerated value of the stateNumber integer. 
+
+		int GetState(): Gets the current state of the robot and returns the integer value of the enumeration.
+
+		void RunState(): Determines the state of the robot through a switch-case and calls the private member function corresponding to that state of the robot. 
+
 EYESUBSYSTEM.h : 
 The Eye Subsystem header file includes all the enumeration, variables, and the Eye Subsystem class. Details of each can be found below.
 •	Enumerations: 
@@ -107,54 +154,6 @@ SHOULDER.h
 
 		void ReadShoulderPositionFromProm(): Reads the shoulder positions from the predetermined address in the EEPROM and sets the current positions of the steppers to the extracted values.
 
-
-ROBOT.h
-
-•	Robot Class: Class encapsulates the entire eye tracker robot, including the eye, neck and shoulder objects, along with members indicating the current state of the robot, and public member functions to
-		run the different states of the robot and interface with the API. 
-
-	Private Members: 
-		robotState (StateMachineState): Enumeration object that stores the current state of the robot (refer StateMachineState enumeration in Function.h).
-		robotEyes (Eyes object): Eyes class object encapsulating the eye subsystem.
-		robotNeck (NeckClass object): NeckClass object that encapsulates the neck subsystem.
-		robotShoulder (Shoulder object): Shoulder object that encapsulates the shoulder subsystem.
-		screenDotPos (Matrix(4)): Matrix that denotes the coordinates of the desired gaze position for the eyes.
-
-	Private Member Functions:
-
-		char getSerialCommand(): Obtains a single character command from the Hardware Serial or the connection to the API by performing Serial.read().
-			Returns the passed in character from the serial port. 
-
-		void updateKinematicChain(): Updates the kinematic chain instance. References the UpdateKinematicChain() function in KinematicChain.h that recalculates the entire kinematic chain going
-			from the eyes to the screen.
-
-		void runMenuModeState(): Runs the MenuMode state, that essentially waits for a user input from the Serial terminal to change the state to a desired one. 
-			References getSerialCommand(). If the command is m, then it prints the current state. If the command is s-(int), it changes the state to the enumerated integer passed in.
-
-		void runServoCalibrationState(): References getSerialCommand() and passes the obtained character into the CalibrateEyes(char) function in EyeSubsystem.h.
-
-		void runServoManualState(): References getSerialCommand() and if the obtained character is g, it parses for a (float,float), loads these values into screenDotPos, and then passes these coordinates into ParallaxEyesToPos(screenDotPosition) function in EyeSubsystem.h.
-
-		void runShoulderHomeState(): References the HomeShoulder() function in the Shoulder class. If a 'b' is encountered during the homing process, the robot is set back to MenuMode.
-
-		void runShoulderManualState(): References getSerialCommand() and if the obtained character is g, it parses for a (float,float,float) and passes these values into the MoveShoulderToPosition(x,y,z) function in Shoulder.h.
-
-		void runNeckCalibrationState(): References getSerialCommand() and passes the obtained character into the CalibrateNeck(char) function in NeckClass.h.
-
-		void runNeckManualState(): References getSerialCommand() and if the obtained character is g, it parses for a (float,float,float) and passes these rotation values into the MoveNeckManually(PhiS,PhiR,Yaw) function in Neck.h.
-			References RunSteppers() function in NeckClass.h to move the steppers to the set target position.
-
-	Public Member Functions:
-
-		void init(): Initialization function for the robot class object. Initializes the eyes, neck and shoulder objects encapsulated. Calls the read-from-EEPROM function in each of the class objects. Calls the updateKinematicChain() function
-			to load all of the variable updates into the kinematic chain instance. 
-
-		void SetState(int stateNumber): Sets the state of the robot to the enumerated value of the stateNumber integer. 
-
-		int GetState(): Gets the current state of the robot and returns the integer value of the enumeration.
-
-		void RunState(): Determines the state of the robot through a switch-case and calls the private member function corresponding to that state of the robot. 
-
 KINEMATICCHAIN.h
 
 •	Kinematic Chain Class: Class that encapsulates the information about the location of origin in the different frames of reference of the robot. The frames of reference of the robot are as follows:
@@ -189,18 +188,20 @@ KINEMATICCHAIN.h
 	
 	Private Member functions:
 		Kinematic Chain(): Constructor of the instance of the class. This is a private member function because it should only be instantiated once throughout
-					the execution of the code. It also populates the transformation matrices with default values.
-		Matrix(3,3) eye(): Creates a 3x3 identity matrix
+					the execution of the code. The function populates the transformation matrices with default values.
 
-		Matrix(3,3) hat(): Function to 
+		Matrix(3,3) eye(): Creates a 3x3 identity matrix.
 
-		float norm(Matrix(3) v)
+		Matrix(3,3) hat(): Function to find the matrix projection of a given 3x1 matrix.
 
-		Matrix(3,3) rodrigues(Matrix(3) xI)
+		float norm(Matrix(3) v): Normalizes a given 3x1 matrix. This is done by finding the square root of the inner product of the parameter vector with itself.
 
-		Matrix(4,4) expmXI(Matrix(6) xI)
+		Matrix(3,3) rodrigues(Matrix(3) xI): Function to obtain the projection of an identity matrix about the given axis of rotation passed in as parameter.
 
-		Matrix(3,3) OuterProduct(Matrix(3) w);
+		Matrix(4,4) expmXI(Matrix(6) xI): Function to calculate the matrix exponential of the given rotational/translation vector. This function is meant to return the transformation matrix
+							given that we provide the rotational and translation values from one reference frame to another.
+
+		Matrix(3,3) OuterProduct(Matrix(3) w): Returns the result of performing outer product
 
 		Matrix(3) CrossProduct(Matrix(3) w, Matrix(3) v)
 

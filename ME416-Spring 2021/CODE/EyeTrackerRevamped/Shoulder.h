@@ -28,12 +28,12 @@ class Shoulder
     bool zeroStepperX();
     bool zeroStepperY();
     bool zeroStepperZ();
-    void updateShoulderPositions();
 
   public:
     Shoulder();
     ~Shoulder();
     void init();
+    void UpdateShoulderPosition(KinematicChain* tfMatrix);
     bool HomeShoulder();
     void MoveShoulderToPosition(float x, float y, float z);
     float GetShoulderPosition(char desiredStepper);

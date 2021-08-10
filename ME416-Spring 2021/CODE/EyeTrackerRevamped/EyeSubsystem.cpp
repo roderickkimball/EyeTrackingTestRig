@@ -6,13 +6,6 @@
 EyeMotor calibrationMotor = rightZ;
 
 /*
-   Microseconds increment required for 1 degree motion of the eyes
-*/
-float microSecondsPerDegree = 10.20408163;
-float lXmicroSecondsPerDegree = 10.20408163 * 1.012;
-float lZmicroSecondsPerDegree = 10.20408163 * 1.1;
-
-/*
    Eye class constructor.
 */
 Eyes::Eyes()
@@ -36,12 +29,18 @@ void Eyes::init()
   this->rXCenter = 1500;
   this->rZCenter = 1500;
 
+  // setting up the default values for microSecondsPerDegree (empirically determined)
+  this->lXmicroSecondsPerDegree = 10.20408163 * 1.05;
+  this->lZmicroSecondsPerDegree = 10.20408163 * 1.05;
+  this->rXmicroSecondsPerDegree = 10.20408163;
+  this->rZmicroSecondsPerDegree = 10.20408163;
+
   this->xServoL.writeMicroseconds(this->lXCenter);
   this->zServoL.writeMicroseconds(this->lZCenter);
   this->xServoR.writeMicroseconds(this->rXCenter);
   this->zServoR.writeMicroseconds(this->rZCenter);
 
-  SerialTerminal->println("Finished setting up eyes");
+  //SerialTerminal->println("Finished setting up eyes");
 }
 
 /*
@@ -53,20 +52,20 @@ void Eyes::parallax(BLA::Matrix<4> leftDotPos, BLA::Matrix<4> rightDotPos)
 {
   // calculating angles of rotation for the left eye
   float alphaLeft = atan2(leftDotPos(1), leftDotPos(0)) * (180 / M_PI);
-  float betaLeft = -atan2(leftDotPos(2), sqrt((leftDotPos(0) * leftDotPos(0)) + (leftDotPos(1) * leftDotPos(1)))) * (180 / M_PI);
+  float betaLeft = atan2(leftDotPos(2), sqrt((leftDotPos(0) * leftDotPos(0)) + (leftDotPos(1) * leftDotPos(1)))) * (180 / M_PI);
 
   // calculating angles of rotation for the right eye
   float alphaRight  = atan2(rightDotPos(1), rightDotPos(0)) * (180 / M_PI);
   float betaRight = atan2(rightDotPos(2), sqrt((rightDotPos(0) * rightDotPos(0)) + (rightDotPos(1) * rightDotPos(1)))) * (180 / M_PI);
 
   // writing the angle values to the X and Z servos.
-  this->xServoL.writeMicroseconds(this->lXCenter + (90 - alphaLeft) * lXmicroSecondsPerDegree);
+  this->xServoL.writeMicroseconds(this->lXCenter + (90 - alphaLeft) * this->lXmicroSecondsPerDegree);
   //delay(50);
-  this->zServoL.writeMicroseconds(this->lZCenter + (betaLeft) * lZmicroSecondsPerDegree);
+  this->zServoL.writeMicroseconds(this->lZCenter + (betaLeft) * this->lZmicroSecondsPerDegree);
   //delay(50);
-  this->xServoR.writeMicroseconds(this->rXCenter + (90 - alphaRight) * microSecondsPerDegree);
+  this->xServoR.writeMicroseconds(this->rXCenter + (90 - alphaRight) * this->rXmicroSecondsPerDegree);
   //delay(50);
-  this->zServoR.writeMicroseconds(this->rZCenter + (betaRight) * microSecondsPerDegree);
+  this->zServoR.writeMicroseconds(this->rZCenter - (betaRight) * this->rZmicroSecondsPerDegree);
   delay(50);
 }
 
@@ -79,7 +78,7 @@ void Eyes::WriteEyeCalibrationVariablesToProm()
   PromAddress eeAddress = LXCenter;
 
   EEPROM.put(eeAddress, this->lXCenter);
-  // incrementing the address variable by 4 because 
+  // incrementing the address variable by 4 because
   // it is the size of a floating point data type
   eeAddress = (PromAddress)((int)eeAddress + 4);
   EEPROM.put(eeAddress, this->lZCenter);
@@ -88,7 +87,7 @@ void Eyes::WriteEyeCalibrationVariablesToProm()
   eeAddress = (PromAddress)((int)eeAddress + 4);
   EEPROM.put(eeAddress, this->rZCenter);
 
-  SerialTerminal->println("Eye Calibration Variables written to Prom");
+  //SerialTerminal->println("Eye Calibration Variables written to Prom");
 }
 
 /*
@@ -115,7 +114,7 @@ void Eyes::ReadEyeCalibrationVariablesFromProm()
   EEPROM.get(eeAddress, servoCenter);
   this->rZCenter = servoCenter;
 
-  SerialTerminal->println("Eye Calibration Variables read from Prom");
+  //SerialTerminal->println("Eye Calibration Variables read from Prom");
 }
 
 /*
@@ -123,22 +122,16 @@ void Eyes::ReadEyeCalibrationVariablesFromProm()
    as a parameter, which is the signal transmitted by the Windows API.
    This character is used as input to the calibration sequence.
 */
-void Eyes::CalibrateEyes(char eyeCalCommand)
+void Eyes::CalibrateEyes(char eyeCalCommand, KinematicChain* tfMatrix)
 {
   // Dot position array corresponding to desired screen location
   // set to zero for calibration to calibrate to center of screen.
   BLA::Matrix<4> screenDotPos = {0, 0, 0, 1};
 
-  // Eye motor determination
-  if (eyeCalCommand == 'r') {
-    if (calibrationMotor == leftX) calibrationMotor = rightX;
-    if (calibrationMotor == rightZ) calibrationMotor = leftX;
-    if (calibrationMotor == leftZ) calibrationMotor = rightZ;
-  }
-  if (eyeCalCommand == 'l') {
-    if (calibrationMotor == rightZ) calibrationMotor = leftZ;
-    if (calibrationMotor == leftX) calibrationMotor = rightZ;
-    if (calibrationMotor == rightX) calibrationMotor = leftX;
+  if (eyeCalCommand == '1' || eyeCalCommand == '2' || eyeCalCommand == '3' || eyeCalCommand == '4') {
+    // converting integer to enumeration
+    int motorChoice = eyeCalCommand - '0';
+    calibrationMotor = static_cast<EyeMotor>(motorChoice);
   }
 
   // switch case to calibrate the center location of respective eye servo.
@@ -147,44 +140,44 @@ void Eyes::CalibrateEyes(char eyeCalCommand)
   {
     case (rightZ) : {
         if (eyeCalCommand == 'u') {
-          this->rZCenter += 1;
+          this->rZCenter += 2;
         }
         if (eyeCalCommand == 'd') {
-          this->rZCenter -= 1;
+          this->rZCenter -= 2;
         }
         break;
       }
     case (leftZ) : {
         if (eyeCalCommand == 'u') {
-          this->lZCenter += 1;
+          this->lZCenter += 2;
         }
         if (eyeCalCommand == 'd') {
-          this->lZCenter -= 1;
+          this->lZCenter -= 2;
         }
         break;
       }
     case (rightX) : {
         if (eyeCalCommand == 'u') {
-          this->rXCenter += 1;
+          this->rXCenter += 2;
         }
         if (eyeCalCommand == 'd') {
-          this->rXCenter -= 1;
+          this->rXCenter -= 2;
         }
         break;
       }
     case (leftX) : {
         if (eyeCalCommand == 'u') {
-          this->lXCenter += 1;
+          this->lXCenter += 2;
         }
         if (eyeCalCommand == 'd') {
-          this->lXCenter -= 1;
+          this->lXCenter -= 2;
         }
         break;
       }
     default : break;
   }
 
-  this->ParallaxEyesToPos(screenDotPos);
+  this->ParallaxEyesToPos(screenDotPos, tfMatrix);
 }
 
 /*
@@ -192,13 +185,8 @@ void Eyes::CalibrateEyes(char eyeCalCommand)
    on the screen. Parameter screenDotPos gives the coordinates of
    the desired position.
 */
-void Eyes::ParallaxEyesToPos(BLA::Matrix<4> screenDotPos)
+void Eyes::ParallaxEyesToPos(BLA::Matrix<4> screenDotPos, KinematicChain* tfMatrix)
 {
-  // obtaining instance of kinematic chain class
-  // this instance will then help determine the coordinate values
-  // for left and right eyes.
-  KinematicChain* tfMatrix = KinematicChain::getInstance();
-
   BLA::Matrix<4> leftDotPos = tfMatrix->GetSL() * screenDotPos;
   BLA::Matrix<4> rightDotPos = tfMatrix->GetSR() * screenDotPos;
 

@@ -11,6 +11,7 @@
 #include "Function.h"
 #include "KinematicChain.h"
 #include <Servo.h>
+#include "M3Stepper.h"
 
 /*
    Additional variables that will be used by the neck
@@ -41,16 +42,12 @@ class RobotNeck
     // private member variables
     // AccelStepper objects for 3 stepper motors of neck
     AccelStepper *frontStepper, *backRightStepper, *backLeftStepper;
+    M3Stepper m3FrontStepper, m3BackRightStepper, m3BackLeftStepper;
 
     Servo neckServo;
     long int neckServoCenter;
 
-    // front stepper last recorded position and calibration position
-    float lastStepperPosFront, calibrationStepperPosFront;
-    // back right stepper last recorded position and calibration position
-    float lastStepperPosBackRight, calibrationStepperPosBackRight;
-    // back left stepper last recorded position and calibration position
-    float lastStepperPosBackLeft, calibrationStepperPosBackLeft;
+    float lastPhiR, lastPhiS, lastPhiD;
 
     // length of the spring in the middle of the neck
     float lSpring;
@@ -61,10 +58,11 @@ class RobotNeck
     void init();
     void CalibrateNeck(char neckCalCommand);
     void MoveToCalibratedPosition();
-    void MoveNeckManually(float x, float y, float z);
+    void MoveNeckManually(float x, float y, float z, KinematicChain* tfMatrix);
+    void SetLastNeckPosition(KinematicChain* tfMatrix);
     void RunSteppers();
-    void WriteNeckPositionToProm(char calibrationOrLastPosition);
-    void ReadNeckPositionFromProm(char calibrationOrLastPosition);
+    void WriteNeckPositionToProm();
+    void ReadNeckPositionFromProm();
 
 };
 
