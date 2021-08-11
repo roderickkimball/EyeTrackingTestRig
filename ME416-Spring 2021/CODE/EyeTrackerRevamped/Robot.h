@@ -27,8 +27,7 @@ class Robot
     Eyes robotEyes;
     Shoulder robotShoulder;
     RobotNeck robotNeck;
-    KinematicChain tfMatrix; 
-    
+
     BLA::Matrix<4> screenDotPos;
 
     char getSerialCommand();
@@ -40,10 +39,21 @@ class Robot
 
     void runMenuModeState();
     void runRobotRunState();
-    
+
     void runEyeCalibrationState();
     void runShoulderCalibrationState();
     void runNeckCalibrationState();
+
+  protected:
+    /*
+        S - will be the screen frame of reference with the zero coordinate at the center of the screen,
+          X will be to the right, Z up, and Y into the screen
+        L - will be the left eye's frame of reference with the origin at the center of rotation
+        and is aligned with the D frame when the 90-degree angle is commanded
+        R - will be the right eye's frame of reference with the origin at the center of rotation
+        and is aligned with D frame when the 90-degree angle is commanded
+    */
+    BLA::Matrix<4, 4> gLS, gRS;
 
 
   public:

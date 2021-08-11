@@ -28,17 +28,15 @@ void Robot::init()
   this->robotEyes.init();
   this->robotShoulder.init();
   this->robotNeck.init();
-  this->tfMatrix.init();
 
   this->robotEyes.ReadEyeCalibrationVariablesFromProm();
 
   // reading the last shoulder position from prom and updating the kinematic chain
   this->robotShoulder.ReadShoulderPositionFromProm();
-  this->robotShoulder.UpdateShoulderPosition(&this->tfMatrix);
 
   // reading the last neck position from prom and updating the kinematic chain
   this->robotNeck.ReadNeckPositionFromProm();
-  this->robotNeck.SetLastNeckPosition(&this->tfMatrix);
+  this->robotNeck.SetLastNeckPosition();
 
   this->updateKinematicChain();
 }
@@ -63,7 +61,8 @@ char Robot::getSerialCommand()
 */
 void Robot::updateKinematicChain()
 {
-  this->tfMatrix.UpdateKinematicChain();
+  this->gLS = this->robotEyes.GetInverseLeftEyeTransformation() * this->robotNeck.GetInverseNeckTransformation() * this->robotShoulder.GetInverseShoulderTransformation();
+  this->gRS = this->robotEyes.GetInverseRightEyeTransformation() * this->robotNeck.GetInverseNeckTransformation() * this->robotShoulder.GetInverseShoulderTransformation();
 }
 
 /*
@@ -106,8 +105,6 @@ void Robot::setRobotPosition(char command)
         float goZ = SerialTerminal->parseFloat();
 
         this->robotShoulder.MoveShoulderToPosition(-goX, -goY, -goZ);
-
-        this->robotShoulder.UpdateShoulderPosition(&this->tfMatrix);
         break;
       }
     case ('n'): {
@@ -115,7 +112,7 @@ void Robot::setRobotPosition(char command)
         float phiS = SerialTerminal->parseFloat();
         float phiD = SerialTerminal->parseFloat();
 
-        this->robotNeck.MoveNeckManually(phiR, phiS, phiD, &this->tfMatrix);        
+        this->robotNeck.MoveNeckManually(phiR, phiS, phiD);        
         break;
       }
     default: break;
@@ -147,7 +144,11 @@ void Robot::getRobotPosition(char command)
         break;
       }
     case ('n'): {
-        SerialTerminal->println("NotImplementedYet");
+        SerialTerminal->print(this->robotNeck.GetLastNeckPosition("PhiR"));
+        SerialTerminal->print(", ");
+        SerialTerminal->print(this->robotNeck.GetLastNeckPosition("PhiS"));
+        SerialTerminal->print(", ");
+        SerialTerminal->println(this->robotNeck.GetLastNeckPosition("PhiD"));
         break;
       }
     default: break;
@@ -186,7 +187,7 @@ void Robot::runRobotRunState()
   }
 
   this->robotNeck.RunSteppers();
-  this->robotEyes.ParallaxEyesToPos(this->screenDotPos, &this->tfMatrix);
+  this->robotEyes.ParallaxEyesToPos(this->screenDotPos, this->gLS, this->gRS);
 }
 
 /*
@@ -198,7 +199,7 @@ void Robot::runEyeCalibrationState()
   char eyeCalCommand = this->getSerialCommand();
 
   // calling robotEyes object to perform calibration of eyes.
-  this->robotEyes.CalibrateEyes(eyeCalCommand, &this->tfMatrix);
+  this->robotEyes.CalibrateEyes(eyeCalCommand, this->gLS, this->gRS);
 
   // if calibration has been stopped, return to MenuMode;
   if (eyeCalCommand == 'm')
@@ -218,12 +219,10 @@ void Robot::runShoulderCalibrationState()
   // Home all steppers function will return false when steppers have finished homing
   bool calibrating = this->robotShoulder.HomeShoulder();
 
-  this->robotShoulder.UpdateShoulderPosition(&this->tfMatrix);
-
   char command = this->getSerialCommand();
 
 
-  if (command == 'm' || calibrating == false)
+  if (calibrating == false)
   {
     this->updateKinematicChain();
     this->robotShoulder.WriteShoulderPositionToProm();

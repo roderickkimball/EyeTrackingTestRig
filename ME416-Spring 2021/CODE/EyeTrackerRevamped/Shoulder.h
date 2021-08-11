@@ -29,16 +29,30 @@ class Shoulder
     bool zeroStepperY();
     bool zeroStepperZ();
 
+    void updateShoulderPosition();
+
+  protected:
+    /*
+      S - will be the screen frame of reference with the zero coordinate at the center of the screen,
+      X will be to the right, Z up, and Y into the screen
+      B - will be the origin frame of reference with the zero coordinate at the position where the
+      stages of the 3-axis shoulder steppers hit the limit switches or zero position
+      C - will be the origin frame of reference located at the center of the Z-axis stage,
+      that the neck and eye mechanisms are mounted to.
+    */
+    BLA::Matrix<4, 4> gBS, gBC, gCS;
+
   public:
     Shoulder();
     ~Shoulder();
     void init();
-    void UpdateShoulderPosition(KinematicChain* tfMatrix);
     bool HomeShoulder();
     void MoveShoulderToPosition(float x, float y, float z);
     float GetShoulderPosition(char desiredStepper);
     void WriteShoulderPositionToProm();
     void ReadShoulderPositionFromProm();
+    // functions to get the inverse transformation matrices for the shoulder subsystem
+    BLA::Matrix<4,4> GetInverseShoulderTransformation();
 };
 
 #endif

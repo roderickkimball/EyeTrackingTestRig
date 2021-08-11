@@ -43,15 +43,6 @@ void RobotNeck::init()
   this->backLeftStepper = new AccelStepper(AccelStepper::DRIVER, backLeftPulse, backLeftDir);
   this->backRightStepper = new AccelStepper(AccelStepper::DRIVER, backRightPulse, backRightDir);
 
-//  this->frontStepper->setMaxSpeed(3000);
-//  this->frontStepper->setAcceleration(1500);
-//
-//  this->backLeftStepper->setMaxSpeed(3000);
-//  this->backLeftStepper->setAcceleration(1500);
-//
-//  this->backRightStepper->setMaxSpeed(3000);
-//  this->backRightStepper->setAcceleration(1500);
-
   this->m3FrontStepper.init(frontDir, frontPulse);
   this->m3BackRightStepper.init(backRightDir, backRightPulse);
   this->m3BackLeftStepper.init(backLeftDir, backLeftPulse);
@@ -71,6 +62,55 @@ void RobotNeck::init()
   this->lastPhiD = 0;
 
   /*
+     Giving initial values to the neck transformation matrices.
+  */
+  this->gCY = KinematicChain::xform(0, 0, 0, 0, (0.0956), (0.0129));
+  // should be replaced with actual coordinates from gantry to base of neck
+  this->gYN = KinematicChain::xform(0, 0, 0, 0, 0, (0.0672));
+  // should be replaced with actual coordinates from base of neck to middle of eyes
+  this->gNT = KinematicChain::xform(0, 0, 0, 0, 0, 0.127);
+
+  this->gTC = this->gNT.Inverse() * this->gYN.Inverse() * this->gCY.Inverse();
+
+
+  // declaring the constant transformation matrices for the neck
+  // these transformation matrices will not get updated throughout the program.
+  this->gO_B1 = {1.0, 0.0, 0.0, 0.0635 * cos(M_PI_2 + 0 * 2 * M_PI / 3),
+                 0.0, 1.0, 0.0, 0.0635 * sin(M_PI_2 + 0 * 2 * M_PI / 3),
+                 0.0, 0.0, 1.0, 0.0,
+                 0.0, 0.0, 0.0, 1.0
+                };
+  this->gO_B2 = {1.0, 0.0, 0.0, 0.0635 * cos(M_PI_2 + 2 * 2 * M_PI / 3),
+                 0.0, 1.0, 0.0, 0.0635 * sin(M_PI_2 + 2 * 2 * M_PI / 3),
+                 0.0, 0.0, 1.0, 0.0,
+                 0.0, 0.0, 0.0, 1.0
+                };
+  this->gO_B3 = {1.0, 0.0, 0.0, 0.0635 * cos(M_PI_2 + 1 * 2 * M_PI / 3),
+                 0.0, 1.0, 0.0, 0.0635 * sin(M_PI_2 + 1 * 2 * M_PI / 3),
+                 0.0, 0.0, 1.0, 0.0,
+                 0.0, 0.0, 0.0, 1.0
+                };
+  this->gPC_P1 = {1.0, 0.0, 0.0, 0.0635 * cos(M_PI_2 + 0 * 2 * M_PI / 3),
+                  0.0, 1.0, 0.0, 0.0635 * sin(M_PI_2 + 0 * 2 * M_PI / 3),
+                  0.0, 0.0, 1.0, 0.0,
+                  0.0, 0.0, 0.0, 1.0
+                 };
+  this->gPC_P2 = {1.0, 0.0, 0.0, 0.0635 * cos(M_PI_2 + 2 * 2 * M_PI / 3),
+                  0.0, 1.0, 0.0, 0.0635 * sin(M_PI_2 + 2 * 2 * M_PI / 3),
+                  0.0, 0.0, 1.0, 0.0,
+                  0.0, 0.0, 0.0, 1.0
+                 };
+  this->gPC_P3 = {1.0, 0.0, 0.0, 0.0635 * cos(M_PI_2 + 1 * 2 * M_PI / 3),
+                  0.0, 1.0, 0.0, 0.0635 * sin(M_PI_2 + 1 * 2 * M_PI / 3),
+                  0.0, 0.0, 1.0, 0.0,
+                  0.0, 0.0, 0.0, 1.0
+                 };
+
+  this->gB1_P1 = {0};
+  this->gB2_P2 = {0};
+  this->gB3_P3 = {0};
+
+  /*
     Length of the spring in meters. Gets updated after MoveToCalState()
     It is 127mm before calibration.
   */
@@ -78,73 +118,43 @@ void RobotNeck::init()
 }
 
 /*
-   Function to calibrate the neck. Calibration sequence attempts to
-   level the neck to a known height indicated by the knownStepperPos variable
-   and the calibration stick.
+   Function to calculate the transformation matrices that go from the bottom plate of the neck
+   to the top plate of the neck. This function must be called whenever the neck angles are set.
 */
-void RobotNeck::CalibrateNeck(char neckCalCommand)
+void RobotNeck::updateNeckTransformation()
 {
-  if (neckCalCommand == '1' || neckCalCommand == '2' || neckCalCommand == '3' || neckCalCommand == '4') {
-    int motorChoice = neckCalCommand - '0';
-    neckCalibrationMotor = static_cast<NeckMotor>(motorChoice);
-  }
-  else if (neckCalCommand == 'z') {
-    this->m3FrontStepper.SetCurrentPosition(knownStepperPos);
-    this->m3BackRightStepper.SetCurrentPosition(knownStepperPos);
-    this->m3BackLeftStepper.SetCurrentPosition(knownStepperPos);
-  }
+  // getting the matrices that will be raised to the exponent in the next step.
+  BLA::Matrix<6> xI01 = {0.0, 0.0, 0.0, 0.0, 0.0, 1.0};
+  BLA::Matrix<6> xI12 = {0.0, 0.0, 1.0, this->lastPhiR / this->lSpring, 0.0, 0.0};
+  BLA::Matrix<6> xI23 = {0.0, 0.0, 0.0, 0.0, 0.0, 1.0};
 
-  switch (neckCalibrationMotor) {
-    case (front): {
-        // 'u' will loosen and 'd' will tighten
-        if (neckCalCommand == 'u') {
-          this->m3FrontStepper.MoveTo(this->m3FrontStepper.CurrentPosition() + 50);
-        }
-        if (neckCalCommand == 'd') {
-          this->m3FrontStepper.MoveTo(this->m3FrontStepper.CurrentPosition() - 50);
-        }
-        break;
-      }
-    case (backRight): {
-        // 'u' will loosen and 'd' will tighten
-        if (neckCalCommand == 'u') {
-          this->m3BackRightStepper.MoveTo(this->m3BackRightStepper.CurrentPosition() + 50);
-        }
-        if (neckCalCommand == 'd') {
-          this->m3BackRightStepper.MoveTo(this->m3BackRightStepper.CurrentPosition() - 50);
-        }
-        break;
-      }
-    case (backLeft): {
-        // 'u' will loosen and 'd' will tighten
-        if (neckCalCommand == 'u') {
-          this->m3BackLeftStepper.MoveTo(this->m3BackLeftStepper.CurrentPosition() + 50);
-        }
-        if (neckCalCommand == 'd') {
-          this->m3BackLeftStepper.MoveTo(this->m3BackLeftStepper.CurrentPosition() - 50);
-        }
-        break;
-      }
-    case (yawServo): {
-        // 'u' will twist to right and 'd' will twist to left
-        if (neckCalCommand == 'u') {
-          this->neckServoCenter += 5;
-          this->neckServo.writeMicroseconds(this->neckServoCenter);
-        }
-        if (neckCalCommand == 'd') {
-          this->neckServoCenter -= 5;
-          this->neckServo.writeMicroseconds(this->neckServoCenter);
-        }
-        break;
-      }
+  // creating the matrix that will go from the base of the neck to the top of the neck.
+  BLA::Matrix<4, 4> g01 = KinematicChain::expmXI(xI01 * this->lastPhiS);
+  BLA::Matrix<4, 4> g02 = KinematicChain::expmXI(xI12 * this->lSpring);
+  BLA::Matrix<4, 4> g03 = KinematicChain::expmXI(xI23 * -(this->lastPhiS));
 
-    default: break;
-  }
-  this->RunSteppers();
+  KinematicChain::PrintG(g01);
+  KinematicChain::PrintG(g02);
+  KinematicChain::PrintG(g03);
 
-  this->m3FrontStepper.SetCurrentPosition(knownStepperPos);
-  this->m3BackRightStepper.SetCurrentPosition(knownStepperPos);
-  this->m3BackLeftStepper.SetCurrentPosition(knownStepperPos);
+  this->gYN = KinematicChain::expmXI(xI01 * this->lastPhiD);
+  this->gYN(2, 3) = (0.0672);
+  // need to assign the distances once again.
+  this->gNT = g01 * g02 * g03;
+
+  this->gB1_P1 = this->gO_B1.Inverse() * this->gNT * this->gPC_P1;
+  this->gB2_P2 = this->gO_B2.Inverse() * this->gNT * this->gPC_P2;
+  this->gB3_P3 = this->gO_B3.Inverse() * this->gNT * this->gPC_P3;
+}
+
+/*
+   Returns the inverse transformation matrix that goes from the top of the neck to the center
+   of the z axis stepper stage
+*/
+BLA::Matrix<4, 4> RobotNeck::GetInverseNeckTransformation()
+{
+  this->gTC = this->gNT.Inverse() * this->gYN.Inverse() * this->gCY.Inverse();
+  return this->gTC;
 }
 
 /*
@@ -152,21 +162,9 @@ void RobotNeck::CalibrateNeck(char neckCalCommand)
    The transformation matrices are then used to determine what the current positions of each of the
    neck steppers would be.
 */
-void RobotNeck::SetLastNeckPosition(KinematicChain* tfMatrix)
+void RobotNeck::SetLastNeckPosition()
 {
-  float PhiS = this->lastPhiS;
-  float PhiR = this->lastPhiR;
-  float PhiD = this->lastPhiD;
-
-  tfMatrix->UpdateNeckTransformationMatrix(PhiR, PhiS, PhiD, this->lSpring);
-
-  this->lastPhiR = PhiR;
-  this->lastPhiS = PhiS;
-  this->lastPhiD = PhiD;
-
-  BLA::Matrix<4, 4> gB1_P1 = tfMatrix->GetgB1P1();
-  BLA::Matrix<4, 4> gB2_P2 = tfMatrix->GetgB2P2();
-  BLA::Matrix<4, 4> gB3_P3 = tfMatrix->GetgB3P3();
+  this->updateNeckTransformation();
 
   float frontCableLength = sqrt(sq(gB1_P1(0, 3)) + sq(gB1_P1(1, 3)) + sq(gB1_P1(2, 3)));
   float backRightCableLength = sqrt(sq(gB2_P2(0, 3)) + sq(gB2_P2(1, 3)) + sq(gB2_P2(2, 3)));
@@ -178,8 +176,28 @@ void RobotNeck::SetLastNeckPosition(KinematicChain* tfMatrix)
 
   this->m3BackLeftStepper.SetCurrentPosition(backLeftCableLength / mmPerStep);
 
-  this->neckServo.writeMicroseconds(this->neckServoCenter + PhiD * (180 / M_PI) * yawMicroSecondsPerDegree);
+  this->neckServo.writeMicroseconds(this->neckServoCenter + this->lastPhiD * (180 / M_PI) * yawMicroSecondsPerDegree);
 
+}
+
+/*
+   Function to get the last commanded neck angles based on the string argument passed
+   that denotes which angle is to be returned.
+*/
+float RobotNeck::GetLastNeckPosition(String whichAngle)
+{
+  if (whichAngle == "PhiR")
+  {
+    return this->lastPhiR;
+  }
+  else if (whichAngle == "PhiS")
+  {
+    return this->lastPhiS;
+  }
+  else if (whichAngle == "PhiD")
+  {
+    return this->lastPhiD;
+  }
 }
 
 /*
@@ -188,25 +206,17 @@ void RobotNeck::SetLastNeckPosition(KinematicChain* tfMatrix)
    X and Y should be scaled between -1 and 1.
    Z should be scaled between 0 and 1.
 */
-void RobotNeck::MoveNeckManually(float x, float y, float z, KinematicChain* tfMatrix)
+void RobotNeck::MoveNeckManually(float x, float y, float z)
 {
-  float PhiR = x;
-  float PhiS = y;
-  float PhiD = z;
+  this->lastPhiR = x;
+  this->lastPhiS = y;
+  this->lastPhiD = z;
 
-  tfMatrix->UpdateNeckTransformationMatrix(PhiR, PhiS, PhiD, this->lSpring);
+  this->updateNeckTransformation();
 
-  this->lastPhiR = PhiR;
-  this->lastPhiS = PhiS;
-  this->lastPhiD = PhiD;
-
-  BLA::Matrix<4, 4> gB1_P1 = tfMatrix->GetgB1P1();
-  BLA::Matrix<4, 4> gB2_P2 = tfMatrix->GetgB2P2();
-  BLA::Matrix<4, 4> gB3_P3 = tfMatrix->GetgB3P3();
-
-  float frontCableLength = sqrt(sq(gB1_P1(0, 3)) + sq(gB1_P1(1, 3)) + sq(gB1_P1(2, 3)));
-  float backRightCableLength = sqrt(sq(gB2_P2(0, 3)) + sq(gB2_P2(1, 3)) + sq(gB2_P2(2, 3)));
-  float backLeftCableLength = sqrt(sq(gB3_P3(0, 3)) + sq(gB3_P3(1, 3)) + sq(gB3_P3(2, 3)));
+  float frontCableLength = sqrt(sq(this->gB1_P1(0, 3)) + sq(this->gB1_P1(1, 3)) + sq(this->gB1_P1(2, 3)));
+  float backRightCableLength = sqrt(sq(this->gB2_P2(0, 3)) + sq(this->gB2_P2(1, 3)) + sq(this->gB2_P2(2, 3)));
+  float backLeftCableLength = sqrt(sq(this->gB3_P3(0, 3)) + sq(this->gB3_P3(1, 3)) + sq(this->gB3_P3(2, 3)));
 
   this->m3FrontStepper.MoveTo(frontCableLength / mmPerStep);
 
@@ -214,7 +224,7 @@ void RobotNeck::MoveNeckManually(float x, float y, float z, KinematicChain* tfMa
 
   this->m3BackLeftStepper.MoveTo(backLeftCableLength / mmPerStep);
 
-  this->neckServo.writeMicroseconds(this->neckServoCenter + PhiD * (180 / M_PI) * yawMicroSecondsPerDegree);
+  this->neckServo.writeMicroseconds(this->neckServoCenter + this->lastPhiD * (180 / M_PI) * yawMicroSecondsPerDegree);
 }
 
 /*
@@ -316,4 +326,74 @@ void RobotNeck::ReadNeckPositionFromProm()
   this->neckServoCenter = stepperPosition;
 
   //SerialTerminal->println("Neck variables read!");
+}
+
+/*
+   Function to calibrate the neck. Calibration sequence attempts to
+   level the neck to a known height indicated by the knownStepperPos variable
+   and the calibration stick.
+*/
+void RobotNeck::CalibrateNeck(char neckCalCommand)
+{
+  if (neckCalCommand == '1' || neckCalCommand == '2' || neckCalCommand == '3' || neckCalCommand == '4') {
+    int motorChoice = neckCalCommand - '0';
+    neckCalibrationMotor = static_cast<NeckMotor>(motorChoice);
+  }
+  else if (neckCalCommand == 'z') {
+    this->m3FrontStepper.SetCurrentPosition(knownStepperPos);
+    this->m3BackRightStepper.SetCurrentPosition(knownStepperPos);
+    this->m3BackLeftStepper.SetCurrentPosition(knownStepperPos);
+  }
+
+  switch (neckCalibrationMotor) {
+    case (front): {
+        // 'u' will loosen and 'd' will tighten
+        if (neckCalCommand == 'u') {
+          this->m3FrontStepper.MoveTo(this->m3FrontStepper.CurrentPosition() + 50);
+        }
+        if (neckCalCommand == 'd') {
+          this->m3FrontStepper.MoveTo(this->m3FrontStepper.CurrentPosition() - 50);
+        }
+        break;
+      }
+    case (backRight): {
+        // 'u' will loosen and 'd' will tighten
+        if (neckCalCommand == 'u') {
+          this->m3BackRightStepper.MoveTo(this->m3BackRightStepper.CurrentPosition() + 50);
+        }
+        if (neckCalCommand == 'd') {
+          this->m3BackRightStepper.MoveTo(this->m3BackRightStepper.CurrentPosition() - 50);
+        }
+        break;
+      }
+    case (backLeft): {
+        // 'u' will loosen and 'd' will tighten
+        if (neckCalCommand == 'u') {
+          this->m3BackLeftStepper.MoveTo(this->m3BackLeftStepper.CurrentPosition() + 50);
+        }
+        if (neckCalCommand == 'd') {
+          this->m3BackLeftStepper.MoveTo(this->m3BackLeftStepper.CurrentPosition() - 50);
+        }
+        break;
+      }
+    case (yawServo): {
+        // 'u' will twist to right and 'd' will twist to left
+        if (neckCalCommand == 'u') {
+          this->neckServoCenter += 5;
+          this->neckServo.writeMicroseconds(this->neckServoCenter);
+        }
+        if (neckCalCommand == 'd') {
+          this->neckServoCenter -= 5;
+          this->neckServo.writeMicroseconds(this->neckServoCenter);
+        }
+        break;
+      }
+
+    default: break;
+  }
+  this->RunSteppers();
+
+  this->m3FrontStepper.SetCurrentPosition(knownStepperPos);
+  this->m3BackRightStepper.SetCurrentPosition(knownStepperPos);
+  this->m3BackLeftStepper.SetCurrentPosition(knownStepperPos);
 }

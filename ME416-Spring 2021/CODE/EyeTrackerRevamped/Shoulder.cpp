@@ -44,6 +44,12 @@ void Shoulder::init()
   // this is the number of steps the steppers have to take
   // to travel 1 meter. Empirically determined.
   this->stepsPerM = 89000;
+
+  // setting initial values to the shoulder transformation matrices
+  this->gBS = KinematicChain::xform(0, 0, 0, (0.14123), 0.562, (0.23123));
+  this->gBC = KinematicChain::xform(0, 0, 0, 0, 0, 0);
+
+  this->gCS = gBC.Inverse() * gBS;
 }
 
 /*
@@ -116,9 +122,14 @@ bool Shoulder::zeroStepperZ()
 /*
    Function to update the shoulder positions in the kinematic chain.
 */
-void Shoulder::UpdateShoulderPosition(KinematicChain* tfMatrix)
+void Shoulder::updateShoulderPosition()
 {
-  tfMatrix->SetStepperPositions(-(this->GetShoulderPosition('x')), -(this->GetShoulderPosition('y')), -(this->GetShoulderPosition('z')));
+  /*
+      y is negative here because in all frames of reference
+      forward is positive y. since the stepper always move back
+      from zero position, we invert the sign of y.
+  */
+  this->gBC = KinematicChain::xform(0, 0, 0, (this->GetShoulderPosition('x')), -(this->GetShoulderPosition('y')), (this->GetShoulderPosition('z')));
 }
 
 /*
@@ -146,6 +157,7 @@ bool Shoulder::HomeShoulder()
   // if the stepper axes have finished calibrating.
   if (xCal == true && yCal == true && zCal == true)
   {
+    this->updateShoulderPosition();
     calibrating = false;
     return calibrating;
   }
@@ -162,7 +174,19 @@ void Shoulder::MoveShoulderToPosition(float x, float y, float z)
   this->yStepper->runToNewPosition(y * this->stepsPerM);
   this->zStepper->runToNewPosition(z * this->stepsPerM);
 
+  this->updateShoulderPosition();
+
   //SerialTerminal->println(this->xStepper->currentPosition());
+}
+
+/*
+ * Gets the inverse transformation matrix that goes from the center of the z axis stepper stage
+ * to the center of the screen.
+ */
+BLA::Matrix<4,4> Shoulder::GetInverseShoulderTransformation()
+{
+  this->gCS = gBC.Inverse() * gBS;
+  return this->gCS;
 }
 
 /*
@@ -172,11 +196,11 @@ float Shoulder::GetShoulderPosition(char desiredStepper)
 {
   switch (desiredStepper) {
     case 'x':
-      return (this->xStepper->currentPosition() / this->stepsPerM);
+      return -(this->xStepper->currentPosition() / this->stepsPerM);
     case 'y':
-      return (this->yStepper->currentPosition() / this->stepsPerM);
+      return -(this->yStepper->currentPosition() / this->stepsPerM);
     case 'z':
-      return (this->zStepper->currentPosition() / this->stepsPerM);
+      return -(this->zStepper->currentPosition() / this->stepsPerM);
     default:
       return NULL;
   }
@@ -222,6 +246,8 @@ void Shoulder::ReadShoulderPositionFromProm()
 
   EEPROM.get(eeAddress, stepperPosition);
   this->zStepper->setCurrentPosition(stepperPosition);
+
+  this->updateShoulderPosition();
 
   //SerialTerminal->println("Shoulder positions read from Prom");
 }

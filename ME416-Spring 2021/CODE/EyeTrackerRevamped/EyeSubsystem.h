@@ -48,18 +48,33 @@ class Eyes
     // this function makes the eyes parallax or look at a single point on the screen
     void parallax(BLA::Matrix<4> leftDotPos, BLA::Matrix<4> rightDotPos);
 
+  protected:
+    /*
+      T - will be the frame of reference located at the center of the top of the neck.
+      D - will be the frame of reference at the center of the eye mechanisms,
+      with Z up, X to the right and Y along the axis of the straight 90-degree eyes
+      L - will be the left eye's frame of reference with the origin at the center of rotation
+      and is aligned with the D frame when the 90-degree angle is commanded
+      R - will be the right eye's frame of reference with the origin at the center of rotation
+      and is aligned with D frame when the 90-degree angle is commanded
+    */
+    BLA::Matrix<4, 4> gTD, gDL, gDR, gLT, gRT;
+
   public:
     //constructor
     Eyes();
     //initializer
     void init();
     //calibration function
-    void CalibrateEyes(char eyeCalCommand, KinematicChain* tfMatrix);
+    void CalibrateEyes(char eyeCalCommand, BLA::Matrix<4, 4> gLS, BLA::Matrix<4, 4> gRS);
     // functions to write and read variables to/from EEPROM
     void WriteEyeCalibrationVariablesToProm();
     void ReadEyeCalibrationVariablesFromProm();
     // public function called by external objects to parallax eyes
-    void ParallaxEyesToPos(BLA::Matrix<4> screenDotPos, KinematicChain* tfMatrix);
+    void ParallaxEyesToPos(BLA::Matrix<4> screenDotPos, BLA::Matrix<4, 4> gLS, BLA::Matrix<4, 4> gRS);
+    // functions to get the inverse transformation matrices for the eye subsystem
+    BLA::Matrix<4, 4> GetInverseLeftEyeTransformation();
+    BLA::Matrix<4, 4> GetInverseRightEyeTransformation();
 };
 
 #endif

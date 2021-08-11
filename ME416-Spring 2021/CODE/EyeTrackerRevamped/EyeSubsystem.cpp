@@ -40,6 +40,14 @@ void Eyes::init()
   this->xServoR.writeMicroseconds(this->rXCenter);
   this->zServoR.writeMicroseconds(this->rZCenter);
 
+  // setting initial values to the eye subsystem transformation matrices
+  this->gTD = KinematicChain::xform(0, 0, 0, (-0.004), (0.0636), (0.0856));
+  this->gDL = KinematicChain::xform(0, 0, 0, (-0.03475), 0, 0);
+  this->gDR = KinematicChain::xform(0, 0, 0, (0.03475), 0, 0);
+
+  this->gLT = gDL.Inverse() * gTD.Inverse();
+  this->gRT = gDR.Inverse() * gTD.Inverse();
+
   //SerialTerminal->println("Finished setting up eyes");
 }
 
@@ -67,6 +75,24 @@ void Eyes::parallax(BLA::Matrix<4> leftDotPos, BLA::Matrix<4> rightDotPos)
   //delay(50);
   this->zServoR.writeMicroseconds(this->rZCenter - (betaRight) * this->rZmicroSecondsPerDegree);
   delay(50);
+}
+
+/*
+   Gets the inverse transformation that goes from center of left eye to top of neck.
+*/
+BLA::Matrix<4, 4> Eyes::GetInverseLeftEyeTransformation()
+{
+  this->gLT = gDL.Inverse() * gTD.Inverse();
+  return this->gLT;
+}
+
+/*
+   Gets the inverse transformation that goes from the center of right eye to top of neck.
+*/
+BLA::Matrix<4, 4> Eyes::GetInverseRightEyeTransformation()
+{
+  this->gRT = gDL.Inverse() * gTD.Inverse();
+  return this->gRT;
 }
 
 /*
@@ -118,11 +144,25 @@ void Eyes::ReadEyeCalibrationVariablesFromProm()
 }
 
 /*
+   Function to make the eyes parallax to a single point
+   on the screen. Parameter screenDotPos gives the coordinates of
+   the desired position.
+*/
+void Eyes::ParallaxEyesToPos(BLA::Matrix<4> screenDotPos, BLA::Matrix<4,4> gLS, BLA::Matrix<4,4> gRS)
+{
+  BLA::Matrix<4> leftDotPos = gLS * screenDotPos;
+  BLA::Matrix<4> rightDotPos = gRS * screenDotPos;
+
+  // calling private helper function to write to servos.
+  this->parallax(leftDotPos, rightDotPos);
+}
+
+/*
    Function to calibrate the eye servos. The function takes eyeCalCommand
    as a parameter, which is the signal transmitted by the Windows API.
    This character is used as input to the calibration sequence.
 */
-void Eyes::CalibrateEyes(char eyeCalCommand, KinematicChain* tfMatrix)
+void Eyes::CalibrateEyes(char eyeCalCommand, BLA::Matrix<4,4> gLS, BLA::Matrix<4,4> gRS)
 {
   // Dot position array corresponding to desired screen location
   // set to zero for calibration to calibrate to center of screen.
@@ -140,10 +180,10 @@ void Eyes::CalibrateEyes(char eyeCalCommand, KinematicChain* tfMatrix)
   {
     case (rightZ) : {
         if (eyeCalCommand == 'u') {
-          this->rZCenter += 2;
+          this->rZCenter -= 2;
         }
         if (eyeCalCommand == 'd') {
-          this->rZCenter -= 2;
+          this->rZCenter += 2;
         }
         break;
       }
@@ -177,19 +217,5 @@ void Eyes::CalibrateEyes(char eyeCalCommand, KinematicChain* tfMatrix)
     default : break;
   }
 
-  this->ParallaxEyesToPos(screenDotPos, tfMatrix);
-}
-
-/*
-   Function to make the eyes parallax to a single point
-   on the screen. Parameter screenDotPos gives the coordinates of
-   the desired position.
-*/
-void Eyes::ParallaxEyesToPos(BLA::Matrix<4> screenDotPos, KinematicChain* tfMatrix)
-{
-  BLA::Matrix<4> leftDotPos = tfMatrix->GetSL() * screenDotPos;
-  BLA::Matrix<4> rightDotPos = tfMatrix->GetSR() * screenDotPos;
-
-  // calling private helper function to write to servos.
-  this->parallax(leftDotPos, rightDotPos);
+  this->ParallaxEyesToPos(screenDotPos, gLS, gRS);
 }

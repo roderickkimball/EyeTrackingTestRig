@@ -51,6 +51,26 @@ class RobotNeck
 
     // length of the spring in the middle of the neck
     float lSpring;
+    // function to update the neck transformation matrices
+    void updateNeckTransformation();
+
+  protected:
+    /*
+      C - will be the origin frame of reference located at the center of the Z-axis stage,
+      that the neck and eye mechanisms are mounted to.
+      Y - will be the frame of reference located at the center of the yaw rotation servo.
+      N - will be the frame of reference located at the base of the neck of the robot.
+      T - will be the frame of reference located at the center of the top of the neck.
+    */
+    BLA::Matrix<4, 4> gCY, gYN, gNT, gTC;
+    /*
+       Now we define the transformation matrices for the neck.
+       O - signifies the origin point of the neck at the middle of the base.
+       B1 - front point at the base; B2 - back right point at the base; B3 - back left point at the base;
+       P1 - front point at the top; P2 - back right point; P3 - back left point; PC - center point at the top
+    */
+    BLA::Matrix<4, 4> gO_B1, gO_B2, gO_B3, gPC_P1, gPC_P2, gPC_P3;
+    BLA::Matrix<4, 4> gB1_P1, gB2_P2, gB3_P3;
 
   public:
     RobotNeck();
@@ -58,11 +78,14 @@ class RobotNeck
     void init();
     void CalibrateNeck(char neckCalCommand);
     void MoveToCalibratedPosition();
-    void MoveNeckManually(float x, float y, float z, KinematicChain* tfMatrix);
-    void SetLastNeckPosition(KinematicChain* tfMatrix);
+    void MoveNeckManually(float x, float y, float z);
+    void SetLastNeckPosition();
+    float GetLastNeckPosition(String whichAngle);
     void RunSteppers();
     void WriteNeckPositionToProm();
     void ReadNeckPositionFromProm();
+    // functions to get the inverse transformation matrices for the neck subsystem    
+    BLA::Matrix<4,4> GetInverseNeckTransformation();
 
 };
 

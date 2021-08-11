@@ -3,6 +3,11 @@
 
 #include <Arduino.h>
 
+/*
+ * M3 Stepper class uses HIGH_LOW pulses to move the steppers one step at a time.
+ * Class allows us to set the speed of the respective stepper controllers as well.
+ * Using this class ensures that the steppers dont miss any steps, especially when accuracy is important.
+ */
 class M3Stepper{
 
   private: 

@@ -18,6 +18,26 @@ Robot eyeTrackerRobot;
    Debugging serial comm line, and IMU if available.
 */
 void setup() {
+  InitializeComponents();
+  // initializing Robot Class object
+  eyeTrackerRobot.init();
+}
+
+/*
+   Loop() function will constantly call RunState function from the Robot class.
+   This function performs all the decision making for the State Machine.
+*/
+void loop() {
+  eyeTrackerRobot.RunState();
+  //Serial.println(eyeTrackerRobot.GetState());
+}
+
+/*
+   Function to initialize the serial ports, XBOX, BNO objects and turn on
+   the servo relay.
+*/
+void InitializeComponents()
+{
   // Debugging Serial
   Serial.begin(115200); //max value
 
@@ -48,16 +68,4 @@ void setup() {
   // Setting and writing pin mode for servoRelay.
   pinMode(servoRelay, OUTPUT);
   digitalWrite(servoRelay, LOW); //Servo enable using relay - using that to prevent jitter when arduino starts
-
-  // initializing Robot Class object
-  eyeTrackerRobot.init();
-}
-
-/*
-   Loop() function will constantly call RunState function from the Robot class.
-   This function performs all the decision making for the State Machine.
-*/
-void loop() {
-  eyeTrackerRobot.RunState();
-  //Serial.println(eyeTrackerRobot.GetState());
 }
