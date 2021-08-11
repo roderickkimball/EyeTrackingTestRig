@@ -1,2 +1,0 @@
-# eyetracker
-Gleason Eye Tracker

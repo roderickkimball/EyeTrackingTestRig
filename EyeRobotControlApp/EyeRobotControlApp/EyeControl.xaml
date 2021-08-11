@@ -1,0 +1,62 @@
+﻿<Page x:Class="EyeRobotControlApp.EyeControl"
+      xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+      xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+      xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+      xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+      xmlns:local="clr-namespace:EyeRobotControlApp"
+      mc:Ignorable="d" 
+      d:DesignHeight="450" d:DesignWidth="800"
+      Title="EyeControl">
+
+    <Grid ShowGridLines="False" Margin="10">
+        <!-- 4 x 4 ...for now-->
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*"/>
+            <ColumnDefinition Width="*"/>
+            <ColumnDefinition Width="*"/>
+            <ColumnDefinition Width="*"/>
+        </Grid.ColumnDefinitions>
+        <Grid.RowDefinitions>
+            <RowDefinition/>
+            <RowDefinition/>
+            <RowDefinition/>
+            <RowDefinition/>
+        </Grid.RowDefinitions>
+        <Button x:Name="gButton" Content="Gaze:"
+                Grid.Column="1" Grid.Row="1" Margin="0"
+                Click="GazeButton_Click" />
+        <Button x:Name="pButton" Content="Position"
+                Grid.Column="2" Grid.Row="1"
+                Click="PosButton_Click" />
+        <Button x:Name="cButton" Content="Center"
+                Grid.Column="1" Grid.Row="2"
+                Click="CenterButton_Click" />
+        <Button x:Name="typeButton" Content="Type Word"
+                Grid.Column="2" Grid.Row="2"
+                Click="TypeButton_Click" />
+        <Button x:Name="eyeServoCalButton" Click="EyeServoCal_Click" Grid.Column="3"/>
+        <TextBlock Text="{Binding Path=DisplGazePos, UpdateSourceTrigger=PropertyChanged}" 
+                   Grid.Column="2" Grid.Row="1" TextAlignment="Right" Margin="0,0,10,0"
+                   Height="20" VerticalAlignment="Bottom" Name="postionDisplay" />
+        <TextBlock Text="Gaze coordinates in meters from center-screen" Grid.Column="1" Foreground="AliceBlue" FontSize="14"
+                   Grid.ColumnSpan="2" VerticalAlignment="Bottom" HorizontalAlignment="Center" Margin="0,3,0,0"/>
+        <Grid Grid.Column="1" Grid.Row="1">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+            <TextBox x:Name="gazeToTextBoxX" TextWrapping="Wrap" Text="0" 
+                 Height="20" VerticalAlignment="Bottom" />
+            <TextBox x:Name="gazeToTextBoxZ" TextWrapping="Wrap" Text="0" 
+                 Height="20" VerticalAlignment="Bottom" Grid.Column="1"/>
+            <TextBlock Text="X:" VerticalAlignment="Bottom" Margin="3,0,50,20"/>
+            <TextBlock Text="Z:" VerticalAlignment="Bottom" Margin="3,0,50,20" Grid.Column="1"/>
+        </Grid>
+        <TextBox x:Name="letterTextBox" Height="20" TextWrapping="Wrap" Text="qwerty" VerticalAlignment="Bottom"
+                 Grid.Column="2" Grid.Row="2"/>
+        <Button x:Name="debugButton" Grid.Column="0" Grid.Row="3" Click="DebugButton_Click">
+            <TextBlock>Debug<LineBreak/>Commands</TextBlock>
+        </Button>
+        <TextBox x:Name="debugText" Grid.Column="0" Grid.Row="3" Height="20" VerticalAlignment="Bottom" Text="Lorem Ipsum"/>
+    </Grid>
+</Page>

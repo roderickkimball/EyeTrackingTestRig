@@ -1,0 +1,17 @@
+﻿<Window x:Class="EyeRobotControlApp.InputCOM"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:EyeRobotControlApp"
+        mc:Ignorable="d" Background="DarkGray"
+        Title="InputCOM" Height="245" Width="400">
+    <Grid>
+        <TextBox x:Name="comPortBox" Text="COM3" VerticalAlignment="Center" Width="100" TextAlignment="Center" FontSize="14" />
+        <TextBlock Text="Enter COM port robot is connected to" Foreground="WhiteSmoke"
+                   VerticalAlignment="Center" HorizontalAlignment="Center" Margin="0,0,0,45" FontSize="14"/>
+        <Button x:Name="enter" Content="ENTER" FontSize="15" VerticalAlignment="Center" Width="120" Margin="0,0,0,-55" Click="Enter_Click"/>
+        <Button x:Name="ejectButton" Content="Close App" VerticalAlignment="Top" HorizontalAlignment="Right" 
+                FontSize="14" Height="30" Width="90" Background="IndianRed" Click="EjectApp_Click"/>
+    </Grid>
+</Window>
