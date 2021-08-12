@@ -27,7 +27,7 @@ class Robot
     Eyes robotEyes;
     Shoulder robotShoulder;
     RobotNeck robotNeck;
-
+    //gaze coordinates
     BLA::Matrix<4> screenDotPos;
 
     char getSerialCommand();
